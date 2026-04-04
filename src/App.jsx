@@ -1,13 +1,14 @@
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "./services/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "./services/firebase";
 
+// Pages
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
-import RepDashboard from "./pages/RepDashboard";
 import SchoolDashboard from "./pages/SchoolDashboard";
+import RepDashboard from "./pages/RepDashboard";
 
 function AppContent() {
   const [loading, setLoading] = useState(true);
@@ -15,6 +16,7 @@ function AppContent() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      
       if (!user) {
         navigate("/login");
         setLoading(false);
@@ -22,12 +24,12 @@ function AppContent() {
       }
 
       try {
-        // 🔥 GET ROLE FROM FIRESTORE
         const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
 
         if (!docSnap.exists()) {
           navigate("/login");
+          setLoading(false);
           return;
         }
 
@@ -35,7 +37,6 @@ function AppContent() {
 
         console.log("AUTH ROLE:", role);
 
-        // 🔥 ROLE-BASED REDIRECT
         if (role === "admin") navigate("/admin-dashboard");
         else if (role === "rep") navigate("/rep-dashboard");
         else if (role === "school") navigate("/school-dashboard");
@@ -52,24 +53,28 @@ function AppContent() {
     return () => unsubscribe();
   }, [navigate]);
 
-  if (loading) return <h2>Loading...</h2>;
+  if (loading) {
+    return (
+      <div style={{ padding: "40px", textAlign: "center" }}>
+        <h2>Loading...</h2>
+      </div>
+    );
+  }
 
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/admin-dashboard" element={<AdminDashboard />} />
-      <Route path="/rep-dashboard" element={<RepDashboard />} />
       <Route path="/school-dashboard" element={<SchoolDashboard />} />
+      <Route path="/rep-dashboard" element={<RepDashboard />} />
     </Routes>
   );
 }
 
-function App() {
+export default function App() {
   return (
     <BrowserRouter>
       <AppContent />
     </BrowserRouter>
   );
 }
-
-export default App;
