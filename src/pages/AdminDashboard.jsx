@@ -7,6 +7,7 @@ export default function AdminDashboard() {
   const [reps, setReps] = useState(0);
   const [trainings, setTrainings] = useState(0);
   const [clubs, setClubs] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchAllData();
@@ -14,9 +15,10 @@ export default function AdminDashboard() {
 
   const fetchAllData = async () => {
     try {
-      // SCHOOLS (from users collection)
-      const userSnap = await getDocs(collection(db, "users"));
+      console.log("FETCH RUNNING...");
 
+      // ✅ USERS → count schools
+      const userSnap = await getDocs(collection(db, "users"));
       let schoolCount = 0;
 
       userSnap.forEach((doc) => {
@@ -26,33 +28,79 @@ export default function AdminDashboard() {
 
       setSchools(schoolCount);
 
-      // REPS (from reps collection)
+      // ✅ REPS
       const repSnap = await getDocs(collection(db, "reps"));
+      console.log("REPS:", repSnap.size);
       setReps(repSnap.size);
 
-      // TRAININGS (from trainingSessions collection)
+      // ✅ TRAININGS (CHECK NAME IN FIREBASE IF 0)
       const trainingSnap = await getDocs(collection(db, "trainingSessions"));
+      console.log("TRAININGS:", trainingSnap.size);
       setTrainings(trainingSnap.size);
 
-      // CLUBS (from clubs collection)
+      // ✅ CLUBS
       const clubSnap = await getDocs(collection(db, "clubs"));
+      console.log("CLUBS:", clubSnap.size);
       setClubs(clubSnap.size);
 
+      setLoading(false);
+
     } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+      console.error("Dashboard Error:", error);
+      setLoading(false);
     }
   };
+
+  // ✅ LOADING STATE
+  if (loading) {
+    return (
+      <div style={{ padding: "20px" }}>
+        <h2>Loading dashboard...</h2>
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: "20px" }}>
       <h1>Admin Dashboard</h1>
 
-      <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
-        <div>Total Schools: {schools}</div>
-        <div>Total Reps: {reps}</div>
-        <div>Total Trainings: {trainings}</div>
-        <div>Total Clubs: {clubs}</div>
+      {/* ✅ SUMMARY CARDS */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(4, 1fr)",
+        gap: "20px",
+        marginTop: "20px"
+      }}>
+        <Card title="Schools" value={schools} />
+        <Card title="Reps" value={reps} />
+        <Card title="Trainings" value={trainings} />
+        <Card title="Clubs" value={clubs} />
       </div>
+
+      {/* ✅ STATUS MESSAGE */}
+      <div style={{ marginTop: "30px" }}>
+        <h3>System Status</h3>
+        <p>
+          {reps === 0 && "⚠ No reps found. "}
+          {trainings === 0 && "⚠ No trainings recorded. "}
+          {clubs === 0 && "⚠ No clubs created. "}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ✅ SIMPLE CARD COMPONENT
+function Card({ title, value }) {
+  return (
+    <div style={{
+      padding: "20px",
+      borderRadius: "10px",
+      background: "#f5f5f5",
+      boxShadow: "0 2px 6px rgba(0,0,0,0.1)"
+    }}>
+      <h3>{title}</h3>
+      <h2>{value}</h2>
     </div>
   );
 }
