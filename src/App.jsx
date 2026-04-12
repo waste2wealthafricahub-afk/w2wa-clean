@@ -11,13 +11,31 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Authentication */}
         <Route path="/" element={<Login />} />
+
+        {/* Online Registration */}
+        <Route path="/register-school" element={<SchoolRegistration />} />
+        <Route path="/register-rep" element={<RepRegistration />} />
+
+        {/* Dashboards */}
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/school-dashboard" element={<SchoolDashboard />} />
         <Route path="/rep-dashboard" element={<RepDashboard />} />
-        <Route path="/school-registration" element={<SchoolRegistration />} />
-        <Route path="/rep-registration" element={<RepRegistration />} />
+
+        {/* Admin Controls */}
         <Route path="/admin-approvals" element={<AdminApprovals />} />
+
+        {/* Fallback Route */}
+        <Route
+          path="*"
+          element={
+            <div style={{ textAlign: "center", marginTop: "50px" }}>
+              <h2>404 - Page Not Found</h2>
+              <p>The page you are looking for does not exist.</p>
+            </div>
+          }
+        />
       </Routes>
     </Router>
   );
