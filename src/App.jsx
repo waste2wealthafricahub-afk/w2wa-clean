@@ -1,80 +1,63 @@
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "./services/firebase";
-
-// Pages
-import Login from "./pages/Login";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Login from "./pages/login";
 import AdminDashboard from "./pages/AdminDashboard";
 import SchoolDashboard from "./pages/SchoolDashboard";
 import RepDashboard from "./pages/RepDashboard";
+import ProtectedRoute from "./components/ProtectedRoute";
+import SchoolRegistration from "./pages/SchoolRegistration";
+import RepRegistration from "./pages/RepRegistration"; // Only once
+import AdminApprovals from "./pages/AdminApprovals";
 
-function AppContent() {
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      
-      if (!user) {
-        navigate("/login");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-
-        if (!docSnap.exists()) {
-          navigate("/login");
-          setLoading(false);
-          return;
-        }
-
-        const role = docSnap.data().role;
-
-        console.log("AUTH ROLE:", role);
-
-        if (role === "admin") navigate("/admin-dashboard");
-        else if (role === "rep") navigate("/rep-dashboard");
-        else if (role === "school") navigate("/school-dashboard");
-        else navigate("/login");
-
-      } catch (error) {
-        console.error(error);
-        navigate("/login");
-      }
-
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [navigate]);
-
-  if (loading) {
-    return (
-      <div style={{ padding: "40px", textAlign: "center" }}>
-        <h2>Loading...</h2>
-      </div>
-    );
-  }
-
+function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/admin-dashboard" element={<AdminDashboard />} />
-      <Route path="/school-dashboard" element={<SchoolDashboard />} />
-      <Route path="/rep-dashboard" element={<RepDashboard />} />
-    </Routes>
+    <Router>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<Login />} />
+        <Route path="/register-school" element={<SchoolRegistration />} />
+        <Route path="/apply-rep" element={<RepRegistration />} />
+
+        {/* Admin Routes */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRole="admin">
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/approvals"
+          element={
+            <ProtectedRoute allowedRole="admin">
+              <AdminApprovals />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* School Route */}
+        <Route
+          path="/school"
+          element={
+            <ProtectedRoute allowedRole="school">
+              <SchoolDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Representative Route */}
+        <Route
+          path="/rep"
+          element={
+            <ProtectedRoute allowedRole="rep">
+              <RepDashboard />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </Router>
   );
 }
 
-export default function App() {
-  return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
-  );
-}
+export default App;

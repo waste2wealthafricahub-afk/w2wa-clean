@@ -1,114 +1,107 @@
-import { useState } from "react";
-import { addDoc, collection, doc, getDoc } from "firebase/firestore";
-import { auth, db } from "../services/firebase";
+import { useEffect, useState } from "react";
+import { db } from "../services/firebase";
+import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer
+} from "recharts";
 
 export default function SchoolDashboard() {
-  const [wasteKg, setWasteKg] = useState("");
-  const [wasteType, setWasteType] = useState("plastic");
-  const [loading, setLoading] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const [totals, setTotals] = useState({
+    metal: 0,
+    plastic: 0,
+    paper: 0,
+    value: 0
+  });
+  const [loading, setLoading] = useState(true);
 
-  // 💰 pricing per waste type
-  const priceMap = {
-    plastic: 200,
-    organic: 100,
-    metal: 300,
-  };
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(getAuth(), async (user) => {
+      if (!user) return;
 
-  const value = wasteKg ? wasteKg * priceMap[wasteType] : 0;
+      const userSnap = await getDocs(
+        query(collection(db, "users"), where("__name__", "==", user.uid))
+      );
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+      const userData = userSnap.docs[0].data();
+      const schoolId = userData.schoolId;
 
-    if (!wasteKg) {
-      alert("Enter waste amount");
-      return;
-    }
+      const q = query(
+        collection(db, "recyclingLogs"),
+        where("schoolId", "==", schoolId),
+        orderBy("createdAt", "desc")
+      );
 
-    try {
-      setLoading(true);
+      const snap = await getDocs(q);
+      const data = snap.docs.map(doc => doc.data());
 
-      const user = auth.currentUser;
+      setLogs(data);
 
-      if (!user) {
-        alert("User not logged in");
-        return;
-      }
+      let metal = 0, plastic = 0, paper = 0, value = 0;
 
-      // 🔥 get user record
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-
-      if (!userDoc.exists()) {
-        alert("User record not found");
-        return;
-      }
-
-      const userData = userDoc.data();
-
-      // 🔥 get school record
-      const schoolDoc = await getDoc(doc(db, "schools", userData.schoolId));
-
-      const schoolName = schoolDoc.exists()
-        ? schoolDoc.data().name
-        : "Unknown School";
-
-      // 🔥 save submission
-      await addDoc(collection(db, "recyclingLogs"), {
-        schoolId: userData.schoolId,
-        schoolName: schoolName,
-        wasteKg: Number(wasteKg),
-        wasteType: wasteType,
-        value: value,
-        createdAt: new Date(),
+      data.forEach(d => {
+        metal += d.metal || 0;
+        plastic += d.plastic || 0;
+        paper += d.paper || 0;
+        value += d.totalValue || 0;
       });
 
-      alert("✅ Submission successful!");
+      setTotals({ metal, plastic, paper, value });
+      setLoading(false);
+    });
 
-      setWasteKg("");
+    return () => unsubscribe();
+  }, []);
 
-    } catch (error) {
-      console.error(error);
-      alert("Error submitting data");
-    }
+  if (loading) return <p>Loading...</p>;
 
-    setLoading(false);
-  };
+  const chartData = [
+    { name: "Metal", value: totals.metal },
+    { name: "Plastic", value: totals.plastic },
+    { name: "Paper", value: totals.paper }
+  ];
 
   return (
-    <div style={{ padding: "30px" }}>
-      <h2>🏫 School Dashboard</h2>
+    <div style={{ padding: 20 }}>
+      <h2>School Dashboard</h2>
 
-      <form onSubmit={handleSubmit}>
-        
-        {/* Waste Input */}
-        <input
-          type="number"
-          placeholder="Enter waste (kg)"
-          value={wasteKg}
-          onChange={(e) => setWasteKg(e.target.value)}
-        />
+      <div>
+        <p>Metal: {totals.metal} kg</p>
+        <p>Plastic: {totals.plastic} kg</p>
+        <p>Paper: {totals.paper} kg</p>
+        <p>Total Value: ₦{totals.value}</p>
+      </div>
 
-        <br /><br />
+      <div style={{ width: "100%", height: 300 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Bar dataKey="value" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
 
-        {/* Waste Type */}
-        <select value={wasteType} onChange={(e) => setWasteType(e.target.value)}>
-          <option value="plastic">Plastic</option>
-          <option value="organic">Organic</option>
-          <option value="metal">Metal</option>
-        </select>
-
-        <br /><br />
-
-        {/* Value Preview */}
-        <strong>💰 Estimated Value: ₦{value}</strong>
-
-        <br /><br />
-
-        {/* Submit */}
-        <button type="submit" disabled={loading}>
-          {loading ? "Submitting..." : "Submit Waste"}
-        </button>
-
-      </form>
+      <h3>Recent Activity</h3>
+      {logs.map((log, i) => (
+        <div key={i} style={{ borderBottom: "1px solid #ccc", marginBottom: 10 }}>
+          <p>{log.createdAt?.toDate().toLocaleString()}</p>
+          <p>Metal: {log.metal}</p>
+          <p>Plastic: {log.plastic}</p>
+          <p>Paper: {log.paper}</p>
+          <p>Value: ₦{log.totalValue}</p>
+        </div>
+      ))}
     </div>
   );
 }

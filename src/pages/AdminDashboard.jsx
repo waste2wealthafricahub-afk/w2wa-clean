@@ -7,246 +7,225 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  ResponsiveContainer,
   CartesianGrid,
+  ResponsiveContainer,
 } from "recharts";
 
 export default function AdminDashboard() {
-  const [schools, setSchools] = useState(0);
-  const [reps, setReps] = useState(0);
-  const [trainings, setTrainings] = useState(0);
-  const [clubs, setClubs] = useState(0);
-  const [totalWaste, setTotalWaste] = useState(0);
-  const [totalValue, setTotalValue] = useState(0);
-  const [leaderboard, setLeaderboard] = useState([]);
-
-  const fetchAllData = async () => {
-    try {
-      console.log("FETCH RUNNING...");
-
-      // ===== USERS =====
-      const userSnap = await getDocs(collection(db, "users"));
-
-      let schoolCount = 0;
-      const schoolNameMap = {};
-
-      userSnap.forEach((doc) => {
-        const data = doc.data();
-
-        if (data.role === "school") {
-          schoolCount++;
-          schoolNameMap[doc.id] = data.name || "Unnamed School";
-        }
-      });
-
-      setSchools(schoolCount);
-
-      // ===== OTHER COUNTS =====
-      const repSnap = await getDocs(collection(db, "reps"));
-      const trainingSnap = await getDocs(collection(db, "trainingSessions"));
-      const clubSnap = await getDocs(collection(db, "clubs"));
-
-      setReps(repSnap.size);
-      setTrainings(trainingSnap.size);
-      setClubs(clubSnap.size);
-
-      // ===== WASTE =====
-      const wasteSnap = await getDocs(collection(db, "recyclingLogs"));
-
-      let waste = 0;
-      let value = 0;
-
-      const schoolStats = {};
-
-      wasteSnap.forEach((doc) => {
-        const data = doc.data();
-
-        const schoolId = data.schoolId?.trim();
-        if (!schoolId) return;
-
-        const plastic = Number(data.plastic || 0);
-        const paper = Number(data.paper || 0);
-        const metal = Number(data.metal || 0);
-
-        const totalKg = plastic + paper + metal;
-
-        const itemValue =
-          plastic * 150 +
-          paper * 100 +
-          metal * 300;
-
-        waste += totalKg;
-        value += itemValue;
-
-        if (!schoolStats[schoolId]) {
-          schoolStats[schoolId] = {
-            schoolId,
-            name: schoolNameMap[schoolId] || "⚠️ Not Linked",
-            waste: 0,
-            value: 0,
-          };
-        }
-
-        schoolStats[schoolId].waste += totalKg;
-        schoolStats[schoolId].value += itemValue;
-      });
-
-      setTotalWaste(waste);
-      setTotalValue(value);
-
-      const leaderboardArray = Object.values(schoolStats).sort(
-        (a, b) => b.value - a.value
-      );
-
-      setLeaderboard(leaderboardArray);
-
-    } catch (error) {
-      console.error("ERROR:", error);
-    }
-  };
+  const [schools, setSchools] = useState([]);
+  const [stats, setStats] = useState({
+    totalWaste: 0,
+    totalValue: 0,
+    topSchool: "-",
+    highestValue: 0,
+    average: 0,
+  });
+  const [counts, setCounts] = useState({
+    schools: 0,
+    reps: 0,
+    trainings: 0,
+    clubs: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAllData();
+    const fetchData = async () => {
+      try {
+        const logsSnap = await getDocs(collection(db, "recyclingLogs"));
+        const schoolsSnap = await getDocs(collection(db, "schools"));
+        const repsSnap = await getDocs(collection(db, "reps"));
+        const trainingsSnap = await getDocs(collection(db, "trainingSessions"));
+        const clubsSnap = await getDocs(collection(db, "clubs"));
+
+        // Dashboard counts
+        setCounts({
+          schools: schoolsSnap.size,
+          reps: repsSnap.size,
+          trainings: trainingsSnap.size,
+          clubs: clubsSnap.size,
+        });
+
+        // Map school document IDs to school names
+        const schoolMap = {};
+schoolsSnap.forEach((doc) => {
+  const data = doc.data();
+  schoolMap[doc.id] =
+    data.schoolName ||
+    data.name ||
+    "Unnamed School";
+});
+
+        // Aggregate recycling logs
+        const schoolData = {};
+
+        logsSnap.forEach((doc) => {
+          const data = doc.data();
+          const schoolId = data.schoolId;
+
+          if (!schoolId) return;
+
+          if (!schoolData[schoolId]) {
+            schoolData[schoolId] = {
+              schoolId,
+              name: schoolMap[schoolId] || "Not Linked",
+              waste: 0,
+              value: 0,
+            };
+          }
+
+          const waste =
+            (Number(data.metal) || 0) +
+            (Number(data.plastic) || 0) +
+            (Number(data.paper) || 0);
+
+          const value = Number(data.totalValue) || 0;
+
+          schoolData[schoolId].waste += waste;
+          schoolData[schoolId].value += value;
+        });
+
+        const result = Object.values(schoolData).sort(
+          (a, b) => b.value - a.value
+        );
+
+        setSchools(result);
+
+        // 📊 Compute analytics
+        let totalWaste = 0;
+        let totalValue = 0;
+        let highestValue = 0;
+        let topSchool = "-";
+
+        result.forEach((school) => {
+          totalWaste += school.waste;
+          totalValue += school.value;
+
+          if (school.value > highestValue) {
+            highestValue = school.value;
+            topSchool = school.name;
+          }
+        });
+
+        const average =
+          result.length > 0
+            ? (totalWaste / result.length).toFixed(2)
+            : 0;
+
+        setStats({
+          totalWaste,
+          totalValue,
+          topSchool,
+          highestValue,
+          average,
+        });
+
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching admin data:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  // ===== SAFE CHART DATA =====
-  const chartData = leaderboard.length
-    ? leaderboard.map((s) => ({
-        name: s.name,
-        waste: s.waste,
-      }))
-    : [];
-
-  const cardStyle = {
-    padding: "15px",
-    background: "#f5f7fb",
-    borderRadius: "10px",
-    width: "180px",
-    textAlign: "center",
-    boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-  };
+  if (loading) return <p>Loading...</p>;
 
   return (
     <div style={{ padding: "20px" }}>
-      <h1>Admin Dashboard</h1>
+      <h2>Admin Dashboard</h2>
 
-      {/* ===== CARDS ===== */}
-      <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
-        {[
-          { label: "Schools", value: schools },
-          { label: "Reps", value: reps },
-          { label: "Trainings", value: trainings },
-          { label: "Clubs", value: clubs },
-        ].map((item) => (
-          <div key={item.label} style={cardStyle}>
-            <h4>{item.label}</h4>
-            <p style={{ fontSize: "20px", fontWeight: "bold" }}>
-              {item.value}
-            </p>
-          </div>
-        ))}
+      {/* SUMMARY CARDS */}
+      <div style={{ display: "flex", gap: "20px", marginBottom: "20px", flexWrap: "wrap" }}>
+        <StatCard title="Schools" value={counts.schools} />
+        <StatCard title="Reps" value={counts.reps} />
+        <StatCard title="Trainings" value={counts.trainings} />
+        <StatCard title="Clubs" value={counts.clubs} />
       </div>
 
-      {/* ===== LEADERBOARD ===== */}
-      <h2 style={{ marginTop: "40px" }}>🏆 School Leaderboard</h2>
-
+      {/* LEADERBOARD */}
+      <h3>🏆 School Leaderboard</h3>
       <table
-        style={{
-          width: "100%",
-          marginTop: "10px",
-          borderCollapse: "collapse",
-        }}
+        width="100%"
+        border="1"
+        cellPadding="8"
+        style={{ borderCollapse: "collapse" }}
       >
-        <thead>
-          <tr style={{ background: "#f0f0f0" }}>
+        <thead style={{ background: "#f0f0f0" }}>
+          <tr>
             <th>#</th>
             <th>School</th>
             <th>Waste (kg)</th>
             <th>Value (₦)</th>
           </tr>
         </thead>
-
         <tbody>
-          {leaderboard.map((school, index) => (
-            <tr
-              key={school.schoolId}
-              style={{
-                textAlign: "center",
-                background: index === 0 ? "#ffeaa7" : "white",
-              }}
-            >
-              <td>
-                {index === 0
-                  ? "🥇"
-                  : index === 1
-                  ? "🥈"
-                  : index === 2
-                  ? "🥉"
-                  : index + 1}
-              </td>
-              <td>{school.name}</td>
-              <td>{school.waste}</td>
-              <td>₦{school.value.toLocaleString()}</td>
+          {schools.map((s, index) => (
+            <tr key={index}>
+              <td>{index + 1}</td>
+              <td>{s.name}</td>
+              <td>{s.waste}</td>
+              <td>₦{s.value.toLocaleString()}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {/* ===== CHART ===== */}
-      <h2 style={{ marginTop: "40px" }}>📊 Waste Collection Chart</h2>
+      {/* CHART */}
+      <h3 style={{ marginTop: "30px" }}>📊 Waste Collection Chart</h3>
+<div style={{ width: "100%", height: "400px", minHeight: "300px" }}>
+  {schools.length > 0 ? (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={schools}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip />
+        <Bar dataKey="value" fill="#2c7be5" />
+      </BarChart>
+    </ResponsiveContainer>
+  ) : (
+    <p>No data available</p>
+  )}
+</div>
 
-      <div style={{ width: "100%", height: 300 }}>
-        {chartData.length ? (
-          <ResponsiveContainer>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="waste" />
-            </BarChart>
-          </ResponsiveContainer>
-        ) : (
-          <p>No data available</p>
-        )}
+      {/* ANALYTICS */}
+      <h3 style={{ marginTop: "30px" }}>📈 Analytics</h3>
+      <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+        <StatCard title="Top School" value={stats.topSchool} />
+        <StatCard
+          title="Highest Value"
+          value={`₦${stats.highestValue.toLocaleString()}`}
+        />
+        <StatCard
+          title="Total Waste"
+          value={`${stats.totalWaste} kg`}
+        />
+        <StatCard
+          title="Average / School"
+          value={`${stats.average} kg`}
+        />
       </div>
+    </div>
+  );
+}
 
-      {/* ===== ANALYTICS ===== */}
-      <h2 style={{ marginTop: "40px" }}>📈 Analytics</h2>
-
-      <div style={{ display: "flex", gap: "20px", marginTop: "10px" }}>
-        <div style={cardStyle}>
-          <h4>Top School</h4>
-          <p>{leaderboard[0]?.name || "-"}</p>
-        </div>
-
-        <div style={cardStyle}>
-          <h4>Highest Value</h4>
-          <p>₦{leaderboard[0]?.value?.toLocaleString() || 0}</p>
-        </div>
-
-        <div style={cardStyle}>
-          <h4>Total Waste</h4>
-          <p>{totalWaste} kg</p>
-        </div>
-
-        <div style={cardStyle}>
-          <h4>Average / School</h4>
-          <p>
-            {leaderboard.length
-              ? (totalWaste / leaderboard.length).toFixed(1)
-              : 0}{" "}
-            kg
-          </p>
-        </div>
-      </div>
-
-      {/* ===== SYSTEM STATUS ===== */}
-      <div style={{ marginTop: "30px" }}>
-        <h3>System Status</h3>
-        <p>Total Waste: {totalWaste} kg</p>
-        <p>Total Value: ₦{totalValue.toLocaleString()}</p>
-      </div>
+/* Reusable Stat Card */
+function StatCard({ title, value }) {
+  return (
+    <div
+      style={{
+        background: "#f4f6f9",
+        padding: "20px",
+        borderRadius: "10px",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+        minWidth: "150px",
+        textAlign: "center",
+        flex: "1",
+      }}
+    >
+      <h4>{title}</h4>
+      <p style={{ fontSize: "20px", fontWeight: "bold" }}>{value}</p>
     </div>
   );
 }
