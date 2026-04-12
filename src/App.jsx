@@ -5,7 +5,7 @@ import SchoolDashboard from "./pages/SchoolDashboard";
 import RepDashboard from "./pages/RepDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SchoolRegistration from "./pages/SchoolRegistration";
-import RepRegistration from "./pages/RepRegistration"; // Only once
+import RepRegistration from "./pages/RepRegistration";
 import AdminApprovals from "./pages/AdminApprovals";
 
 function App() {
@@ -26,7 +26,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/admin/approvals"
           element={
@@ -36,7 +35,7 @@ function App() {
           }
         />
 
-        {/* School Route */}
+        {/* School Routes */}
         <Route
           path="/school"
           element={
@@ -46,7 +45,7 @@ function App() {
           }
         />
 
-        {/* Representative Route */}
+        {/* Representative Routes */}
         <Route
           path="/rep"
           element={
