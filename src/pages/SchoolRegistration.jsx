@@ -1,81 +1,144 @@
 import { useState } from "react";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../services/firebase";
+import { doc, setDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
 export default function SchoolRegistration() {
+  const [schoolName, setSchoolName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    schoolName: "",
-    address: "",
-    contactPerson: "",
-    phone: "",
-    email: "",
-    password: "",
-  });
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
     try {
-      // Create user account
+      // Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(
         auth,
-        formData.email,
-        formData.password
+        email,
+        password
       );
 
-      // Save school details to Firestore
-      await addDoc(collection(db, "schools"), {
-        uid: userCredential.user.uid,
-        schoolName: formData.schoolName,
-        address: formData.address,
-        contactPerson: formData.contactPerson,
-        phone: formData.phone,
-        email: formData.email,
+      const user = userCredential.user;
+
+      // Save school details in Firestore
+      await setDoc(doc(db, "schools", user.uid), {
+        name: schoolName,
+        email,
+        phone,
+        address,
         role: "school",
-        status: "pending",
-        createdAt: serverTimestamp(),
+        approved: false,
+        createdAt: new Date(),
       });
 
       alert("Registration successful! Await admin approval.");
       navigate("/");
     } catch (error) {
-      alert("Error: " + error.message);
+      alert("Registration failed: " + error.message);
+      console.error("Registration Error:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div style={styles.container}>
-      <h2>School Registration</h2>
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <input name="schoolName" placeholder="School Name" onChange={handleChange} required />
-        <input name="address" placeholder="School Address" onChange={handleChange} required />
-        <input name="contactPerson" placeholder="Contact Person" onChange={handleChange} required />
-        <input name="phone" placeholder="Phone Number" onChange={handleChange} required />
-        <input type="email" name="email" placeholder="Email" onChange={handleChange} required />
-        <input type="password" name="password" placeholder="Password" onChange={handleChange} required />
-        <button type="submit">Register School</button>
-      </form>
+      <div style={styles.card}>
+        <h2>School Registration</h2>
+
+        <form onSubmit={handleRegister}>
+          <input
+            type="text"
+            placeholder="School Name"
+            value={schoolName}
+            onChange={(e) => setSchoolName(e.target.value)}
+            required
+            style={styles.input}
+          />
+
+          <input
+            type="email"
+            placeholder="School Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            style={styles.input}
+          />
+
+          <input
+            type="text"
+            placeholder="Phone Number"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            required
+            style={styles.input}
+          />
+
+          <input
+            type="text"
+            placeholder="School Address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            required
+            style={styles.input}
+          />
+
+          <input
+            type="password"
+            placeholder="Create Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            style={styles.input}
+          />
+
+          <button type="submit" style={styles.button} disabled={loading}>
+            {loading ? "Registering..." : "Register"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
 
 const styles = {
   container: {
-    maxWidth: "400px",
-    margin: "50px auto",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100vh",
+    backgroundColor: "#f4f6f8",
+  },
+  card: {
+    backgroundColor: "#ffffff",
+    padding: "30px",
+    borderRadius: "10px",
+    boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+    width: "360px",
     textAlign: "center",
   },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
+  input: {
+    width: "100%",
+    padding: "10px",
+    margin: "10px 0",
+    borderRadius: "5px",
+    border: "1px solid #ccc",
+  },
+  button: {
+    width: "100%",
+    padding: "10px",
+    backgroundColor: "#28a745",
+    color: "#fff",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
   },
 };

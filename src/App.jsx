@@ -14,9 +14,9 @@ function App() {
         <Route path="/" element={<Login />} />
 
         {/* Online Registration */}
-        <Route path="/register-school" element={<SchoolRegistration />} />
-        <Route path="/register-rep" element={<RepRegistration />} />
-
+       <Route path="/" element={<Login />} />
+<Route path="/school-registration" element={<SchoolRegistration />} />
+<Route path="/rep-registration" element={<RepRegistration />} />
         {/* Dashboards */}
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/school-dashboard" element={<SchoolDashboard />} />

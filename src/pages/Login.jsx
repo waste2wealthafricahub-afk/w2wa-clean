@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { auth } from "../services/firebase";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -16,7 +17,7 @@ export default function Login() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
 
-      // Role-based navigation (customize as needed)
+      // Role-based redirection
       if (email === "admin@w2wa.com") {
         navigate("/admin-dashboard");
       } else if (email.includes("rep")) {
@@ -36,6 +37,7 @@ export default function Login() {
     <div style={styles.container}>
       <div style={styles.card}>
         <h2>W2WA School Login</h2>
+
         <form onSubmit={handleLogin}>
           <input
             type="email"
@@ -59,6 +61,20 @@ export default function Login() {
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
+
+        <p style={styles.registerText}>
+          New School?{" "}
+          <Link to="/school-registration" style={styles.link}>
+            Register Here
+          </Link>
+        </p>
+
+        <p style={styles.registerText}>
+          Register as Representative?{" "}
+          <Link to="/rep-registration" style={styles.link}>
+            Click Here
+          </Link>
+        </p>
       </div>
     </div>
   );
@@ -77,7 +93,7 @@ const styles = {
     padding: "30px",
     borderRadius: "10px",
     boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
-    width: "320px",
+    width: "340px",
     textAlign: "center",
   },
   input: {
@@ -95,5 +111,14 @@ const styles = {
     border: "none",
     borderRadius: "5px",
     cursor: "pointer",
+  },
+  registerText: {
+    marginTop: "15px",
+    fontSize: "14px",
+  },
+  link: {
+    color: "#007bff",
+    textDecoration: "none",
+    fontWeight: "bold",
   },
 };
