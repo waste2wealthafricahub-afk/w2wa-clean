@@ -1,107 +1,119 @@
 import { useEffect, useState } from "react";
-import { db } from "../services/firebase";
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer
-} from "recharts";
+import { db, auth } from "../services/firebase";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default function SchoolDashboard() {
+  const [waste, setWaste] = useState(0);
+  const [value, setValue] = useState(0);
   const [logs, setLogs] = useState([]);
-  const [totals, setTotals] = useState({
-    metal: 0,
-    plastic: 0,
-    paper: 0,
-    value: 0
-  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(getAuth(), async (user) => {
-      if (!user) return;
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-      const userSnap = await getDocs(
-        query(collection(db, "users"), where("__name__", "==", user.uid))
-      );
+      try {
+        // Query waste logs belonging to the logged-in school
+        const q = query(
+          collection(db, "wasteLogs"),
+          where("schoolEmail", "==", user.email)
+        );
 
-      const userData = userSnap.docs[0].data();
-      const schoolId = userData.schoolId;
+        const querySnapshot = await getDocs(q);
 
-      const q = query(
-        collection(db, "recyclingLogs"),
-        where("schoolId", "==", schoolId),
-        orderBy("createdAt", "desc")
-      );
+        let totalWaste = 0;
+        let totalValue = 0;
+        const wasteData = [];
 
-      const snap = await getDocs(q);
-      const data = snap.docs.map(doc => doc.data());
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data) {
+            totalWaste += Number(data.weight || 0);
+            totalValue += Number(data.value || 0);
+            wasteData.push({ id: doc.id, ...data });
+          }
+        });
 
-      setLogs(data);
-
-      let metal = 0, plastic = 0, paper = 0, value = 0;
-
-      data.forEach(d => {
-        metal += d.metal || 0;
-        plastic += d.plastic || 0;
-        paper += d.paper || 0;
-        value += d.totalValue || 0;
-      });
-
-      setTotals({ metal, plastic, paper, value });
-      setLoading(false);
+        setWaste(totalWaste);
+        setValue(totalValue);
+        setLogs(wasteData);
+      } catch (error) {
+        console.error("Error fetching school data:", error);
+      } finally {
+        setLoading(false);
+      }
     });
 
     return () => unsubscribe();
   }, []);
 
-  if (loading) return <p>Loading...</p>;
-
-  const chartData = [
-    { name: "Metal", value: totals.metal },
-    { name: "Plastic", value: totals.plastic },
-    { name: "Paper", value: totals.paper }
-  ];
+  if (loading) return <p style={{ padding: "20px" }}>Loading...</p>;
 
   return (
-    <div style={{ padding: 20 }}>
+    <div style={{ padding: "20px" }}>
       <h2>School Dashboard</h2>
 
-      <div>
-        <p>Metal: {totals.metal} kg</p>
-        <p>Plastic: {totals.plastic} kg</p>
-        <p>Paper: {totals.paper} kg</p>
-        <p>Total Value: ₦{totals.value}</p>
-      </div>
-
-      <div style={{ width: "100%", height: 300 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="value" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <h3>Recent Activity</h3>
-      {logs.map((log, i) => (
-        <div key={i} style={{ borderBottom: "1px solid #ccc", marginBottom: 10 }}>
-          <p>{log.createdAt?.toDate().toLocaleString()}</p>
-          <p>Metal: {log.metal}</p>
-          <p>Plastic: {log.plastic}</p>
-          <p>Paper: {log.paper}</p>
-          <p>Value: ₦{log.totalValue}</p>
+      <div style={styles.cards}>
+        <div style={styles.card}>
+          <h3>Total Waste</h3>
+          <p>{waste} kg</p>
         </div>
-      ))}
+
+        <div style={styles.card}>
+          <h3>Total Value</h3>
+          <p>₦{value.toLocaleString()}</p>
+        </div>
+      </div>
+
+      <h3>Waste Logs</h3>
+      {logs.length === 0 ? (
+        <p>No waste records found.</p>
+      ) : (
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Waste Type</th>
+              <th>Weight (kg)</th>
+              <th>Value (₦)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {logs.map((log) => (
+              <tr key={log.id}>
+                <td>{log.date || "N/A"}</td>
+                <td>{log.type || "N/A"}</td>
+                <td>{log.weight || 0}</td>
+                <td>₦{Number(log.value || 0).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
+
+const styles = {
+  cards: {
+    display: "flex",
+    gap: "20px",
+    marginBottom: "20px",
+    flexWrap: "wrap",
+  },
+  card: {
+    background: "#f4f6f8",
+    padding: "20px",
+    borderRadius: "10px",
+    minWidth: "200px",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+  },
+};

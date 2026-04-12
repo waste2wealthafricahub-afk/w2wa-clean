@@ -6,7 +6,6 @@ import RepDashboard from "./pages/RepDashboard";
 import SchoolRegistration from "./pages/SchoolRegistration";
 import RepRegistration from "./pages/RepRegistration";
 import AdminApprovals from "./pages/AdminApprovals";
-
 function App() {
   return (
     <Router>
