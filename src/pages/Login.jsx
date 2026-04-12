@@ -6,18 +6,15 @@ import { auth } from "../services/firebase";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
 
-      // Role-based redirection
+      // Role-based navigation
       if (email === "admin@w2wa.com") {
         navigate("/admin-dashboard");
       } else if (email.includes("rep")) {
@@ -27,9 +24,6 @@ export default function Login() {
       }
     } catch (error) {
       alert("Login failed: " + error.message);
-      console.error("Login Error:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -46,6 +40,7 @@ export default function Login() {
             onChange={(e) => setEmail(e.target.value)}
             required
             style={styles.input}
+            autoComplete="email"
           />
 
           <input
@@ -55,13 +50,15 @@ export default function Login() {
             onChange={(e) => setPassword(e.target.value)}
             required
             style={styles.input}
+            autoComplete="current-password"
           />
 
-          <button type="submit" style={styles.button} disabled={loading}>
-            {loading ? "Logging in..." : "Login"}
+          <button type="submit" style={styles.button}>
+            Login
           </button>
         </form>
 
+        {/* Registration Links */}
         <p style={styles.registerText}>
           New School?{" "}
           <Link to="/school-registration" style={styles.link}>
@@ -70,9 +67,9 @@ export default function Login() {
         </p>
 
         <p style={styles.registerText}>
-          Register as Representative?{" "}
+          Are you a Representative?{" "}
           <Link to="/rep-registration" style={styles.link}>
-            Click Here
+            Register Here
           </Link>
         </p>
       </div>
@@ -92,8 +89,8 @@ const styles = {
     backgroundColor: "#ffffff",
     padding: "30px",
     borderRadius: "10px",
-    boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
-    width: "340px",
+    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
+    width: "350px",
     textAlign: "center",
   },
   input: {
