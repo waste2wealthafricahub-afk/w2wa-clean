@@ -1,78 +1,56 @@
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { auth, db } from "../services/firebase";
+import { auth } from "../services/firebase";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError("");
-
     try {
-      // Authenticate user
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const user = userCredential.user;
+      await signInWithEmailAndPassword(auth, email, password);
 
-      // Retrieve user role from Firestore
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
-
-      if (!userSnap.exists()) {
-        throw new Error("User record not found in Firestore.");
-      }
-
-      const { role } = userSnap.data();
-
-      // Redirect based on role
-      if (role === "admin") {
-        navigate("/admin");
-      } else if (role === "school") {
-        navigate("/school");
-      } else if (role === "rep") {
-        navigate("/rep");
+      // Redirect based on email (customize as needed)
+      if (email === "admin@w2wa.com") {
+        navigate("/admin-dashboard");
       } else {
-        throw new Error("Unauthorized role.");
+        navigate("/school-dashboard");
       }
-    } catch (err) {
-      console.error("Login Error:", err);
-      setError(err.message);
-      alert("Login failed: " + err.message);
+    } catch (error) {
+      alert("Login failed: " + error.message);
+      console.error("Login Error:", error);
     }
   };
 
   return (
-    <div style={{ textAlign: "center", marginTop: "50px" }}>
+    <div style={{ textAlign: "center", marginTop: "100px" }}>
       <h2>Login</h2>
       <form onSubmit={handleLogin}>
         <input
           type="email"
-          placeholder="Email"
+          placeholder="Enter Email"
           value={email}
-          required
           onChange={(e) => setEmail(e.target.value)}
+          required
+          style={{ padding: "10px", margin: "10px", width: "250px" }}
         />
-        <br /><br />
+        <br />
         <input
           type="password"
-          placeholder="Password"
+          placeholder="Enter Password"
           value={password}
-          required
           onChange={(e) => setPassword(e.target.value)}
+          required
+          style={{ padding: "10px", margin: "10px", width: "250px" }}
         />
-        <br /><br />
-        <button type="submit">Login</button>
+        <br />
+        <button type="submit" style={{ padding: "10px 20px" }}>
+          Login
+        </button>
       </form>
-      {error && <p style={{ color: "red" }}>{error}</p>}
     </div>
   );
 }
