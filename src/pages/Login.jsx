@@ -1,83 +1,32 @@
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { Link, useNavigate } from "react-router-dom";
-import { auth, db } from "../services/firebase";
+import { useNavigate } from "react-router-dom";
+import { auth } from "../services/firebase";
 
 export default function Login() {
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Authenticate user
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
+      await signInWithEmailAndPassword(auth, email, password);
 
-      const user = userCredential.user;
-
-      // Check Admin collection
-      const adminQuery = query(
-        collection(db, "admins"),
-        where("email", "==", user.email)
-      );
-      const adminSnapshot = await getDocs(adminQuery);
-
-      if (!adminSnapshot.empty) {
+      // Role-based navigation (customize as needed)
+      if (email === "admin@w2wa.com") {
         navigate("/admin-dashboard");
-        return;
-      }
-
-      // Check Schools collection
-      const schoolQuery = query(
-        collection(db, "schools"),
-        where("email", "==", user.email)
-      );
-      const schoolSnapshot = await getDocs(schoolQuery);
-
-      if (!schoolSnapshot.empty) {
-        const schoolData = schoolSnapshot.docs[0].data();
-
-        if (schoolData.status !== "approved") {
-          alert("Your school registration is pending admin approval.");
-          return;
-        }
-
-        navigate("/school-dashboard");
-        return;
-      }
-
-      // Check Representatives collection
-      const repQuery = query(
-        collection(db, "representatives"),
-        where("email", "==", user.email)
-      );
-      const repSnapshot = await getDocs(repQuery);
-
-      if (!repSnapshot.empty) {
-        const repData = repSnapshot.docs[0].data();
-
-        if (repData.status !== "approved") {
-          alert("Your application is pending admin approval.");
-          return;
-        }
-
+      } else if (email.includes("rep")) {
         navigate("/rep-dashboard");
-        return;
+      } else {
+        navigate("/school-dashboard");
       }
-
-      alert("No account found. Please register.");
     } catch (error) {
-      console.error("Login Error:", error);
       alert("Login failed: " + error.message);
+      console.error("Login Error:", error);
     } finally {
       setLoading(false);
     }
@@ -85,40 +34,31 @@ export default function Login() {
 
   return (
     <div style={styles.container}>
-      <h1>W2WA School Project</h1>
-      <h2>Login</h2>
+      <div style={styles.card}>
+        <h2>W2WA School Login</h2>
+        <form onSubmit={handleLogin}>
+          <input
+            type="email"
+            placeholder="Enter Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            style={styles.input}
+          />
 
-      <form onSubmit={handleLogin} style={styles.form}>
-        <input
-          type="email"
-          placeholder="Enter Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={styles.input}
-        />
+          <input
+            type="password"
+            placeholder="Enter Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            style={styles.input}
+          />
 
-        <input
-          type="password"
-          placeholder="Enter Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          style={styles.input}
-        />
-
-        <button type="submit" style={styles.button} disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
-        </button>
-      </form>
-
-      <div style={styles.links}>
-        <p>
-          <Link to="/register-school">Register as a School</Link>
-        </p>
-        <p>
-          <Link to="/register-rep">Apply as a Representative</Link>
-        </p>
+          <button type="submit" style={styles.button} disabled={loading}>
+            {loading ? "Logging in..." : "Login"}
+          </button>
+        </form>
       </div>
     </div>
   );
@@ -126,34 +66,34 @@ export default function Login() {
 
 const styles = {
   container: {
-    maxWidth: "400px",
-    margin: "80px auto",
-    textAlign: "center",
-    padding: "20px",
-    border: "1px solid #ddd",
-    borderRadius: "10px",
-    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-    backgroundColor: "#ffffff",
-  },
-  form: {
     display: "flex",
-    flexDirection: "column",
-    gap: "12px",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100vh",
+    backgroundColor: "#f4f6f8",
+  },
+  card: {
+    backgroundColor: "#ffffff",
+    padding: "30px",
+    borderRadius: "10px",
+    boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+    width: "320px",
+    textAlign: "center",
   },
   input: {
+    width: "100%",
     padding: "10px",
-    fontSize: "16px",
+    margin: "10px 0",
+    borderRadius: "5px",
+    border: "1px solid #ccc",
   },
   button: {
+    width: "100%",
     padding: "10px",
-    fontSize: "16px",
-    backgroundColor: "#2c7a7b",
+    backgroundColor: "#007bff",
     color: "#fff",
     border: "none",
     borderRadius: "5px",
     cursor: "pointer",
-  },
-  links: {
-    marginTop: "15px",
   },
 };
