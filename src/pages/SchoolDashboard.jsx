@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import { db, auth } from "../services/firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  query,
+  where
+} from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
 export default function SchoolDashboard() {
-  const [waste, setWaste] = useState(0);
-  const [value, setValue] = useState(0);
-  const [logs, setLogs] = useState([]);
+  const [club, setClub] = useState(null);
+  const [programmeLaunch, setProgrammeLaunch] = useState(null);
+  const [trainingCount, setTrainingCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,32 +22,56 @@ export default function SchoolDashboard() {
       }
 
       try {
-        // Query waste logs belonging to the logged-in school
-        const q = query(
-          collection(db, "wasteLogs"),
-          where("schoolEmail", "==", user.email)
+        const schoolEmail = user.email;
+
+        // 🔹 1. Get School
+        const schoolSnap = await getDocs(
+          query(collection(db, "schools"), where("email", "==", schoolEmail))
         );
 
-        const querySnapshot = await getDocs(q);
+        if (schoolSnap.empty) {
+          console.log("No school found");
+          setLoading(false);
+          return;
+        }
 
-        let totalWaste = 0;
-        let totalValue = 0;
-        const wasteData = [];
+        const schoolDoc = schoolSnap.docs[0];
+        const schoolId = schoolDoc.id;
 
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (data) {
-            totalWaste += Number(data.weight || 0);
-            totalValue += Number(data.value || 0);
-            wasteData.push({ id: doc.id, ...data });
-          }
-        });
+        // 🔹 2. Get Club
+        const clubSnap = await getDocs(
+          query(collection(db, "clubs"), where("schoolId", "==", schoolId))
+        );
 
-        setWaste(totalWaste);
-        setValue(totalValue);
-        setLogs(wasteData);
+        if (!clubSnap.empty) {
+          setClub(clubSnap.docs[0].data());
+        }
+
+        // 🔹 3. Get Programme Launch
+        const launchSnap = await getDocs(
+          query(
+            collection(db, "clubActivities"),
+            where("schoolId", "==", schoolId),
+            where("type", "==", "onboarding")
+          )
+        );
+
+        if (!launchSnap.empty) {
+          setProgrammeLaunch(launchSnap.docs[0].data());
+        }
+
+        // 🔹 4. Get Training Sessions
+        const trainingSnap = await getDocs(
+          query(
+            collection(db, "trainingSessions"),
+            where("schoolId", "==", schoolId)
+          )
+        );
+
+        setTrainingCount(trainingSnap.size);
+
       } catch (error) {
-        console.error("Error fetching school data:", error);
+        console.error("Dashboard error:", error);
       } finally {
         setLoading(false);
       }
@@ -51,69 +80,43 @@ export default function SchoolDashboard() {
     return () => unsubscribe();
   }, []);
 
-  if (loading) return <p style={{ padding: "20px" }}>Loading...</p>;
+  if (loading) {
+    return <p style={{ padding: "20px" }}>Loading...</p>;
+  }
 
   return (
     <div style={{ padding: "20px" }}>
       <h2>School Dashboard</h2>
 
-      <div style={styles.cards}>
-        <div style={styles.card}>
-          <h3>Total Waste</h3>
-          <p>{waste} kg</p>
-        </div>
-
-        <div style={styles.card}>
-          <h3>Total Value</h3>
-          <p>₦{value.toLocaleString()}</p>
-        </div>
+      {/* CLUB STATUS */}
+      <div style={cardStyle}>
+        <h3>Club Status</h3>
+        <p>{club ? "Established ✅" : "Not Created ❌"}</p>
       </div>
 
-      <h3>Waste Logs</h3>
-      {logs.length === 0 ? (
-        <p>No waste records found.</p>
-      ) : (
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Waste Type</th>
-              <th>Weight (kg)</th>
-              <th>Value (₦)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logs.map((log) => (
-              <tr key={log.id}>
-                <td>{log.date || "N/A"}</td>
-                <td>{log.type || "N/A"}</td>
-                <td>{log.weight || 0}</td>
-                <td>₦{Number(log.value || 0).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      {/* PROGRAMME LAUNCH */}
+      <div style={cardStyle}>
+        <h3>Programme Launch</h3>
+        <p>
+          {programmeLaunch
+            ? programmeLaunch.status || "Completed ✅"
+            : "Pending ❌"}
+        </p>
+      </div>
+
+      {/* TRAINING PROGRESS */}
+      <div style={cardStyle}>
+        <h3>Training Progress</h3>
+        <p>{trainingCount} Sessions Completed</p>
+      </div>
     </div>
   );
 }
 
-const styles = {
-  cards: {
-    display: "flex",
-    gap: "20px",
-    marginBottom: "20px",
-    flexWrap: "wrap",
-  },
-  card: {
-    background: "#f4f6f8",
-    padding: "20px",
-    borderRadius: "10px",
-    minWidth: "200px",
-    boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-  },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-  },
+// Simple styling
+const cardStyle = {
+  background: "#f5f5f5",
+  padding: "15px",
+  marginBottom: "15px",
+  borderRadius: "8px"
 };
