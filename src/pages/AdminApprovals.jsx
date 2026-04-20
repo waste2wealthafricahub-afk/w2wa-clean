@@ -3,118 +3,77 @@ import { db } from "../services/firebase";
 import {
   collection,
   getDocs,
+  doc,
   updateDoc,
-  doc
+  setDoc,
+  serverTimestamp
 } from "firebase/firestore";
 
 export default function AdminApprovals() {
   const [schools, setSchools] = useState([]);
-  const [loading, setLoading] = useState(true);
 
+  // 🔹 Fetch unapproved schools
   const fetchSchools = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "schools"));
-      const schoolList = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setSchools(schoolList);
-    } catch (error) {
-      console.error("Error fetching schools:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const snapshot = await getDocs(collection(db, "schools"));
 
-  const approveSchool = async (id) => {
-    try {
-      const schoolRef = doc(db, "schools", id);
-      await updateDoc(schoolRef, {
-        approved: true,
-      });
-      fetchSchools();
-    } catch (error) {
-      console.error("Error approving school:", error);
-    }
+    const data = snapshot.docs.map((docItem) => ({
+      id: docItem.id,
+      ...docItem.data(),
+    }));
+
+    // Only show unapproved schools
+    const pending = data.filter((s) => !s.approved);
+
+    setSchools(pending);
   };
 
   useEffect(() => {
     fetchSchools();
   }, []);
 
+  // 🔥 APPROVE FUNCTION (CORE LOGIC)
+  const approveSchool = async (school) => {
+    try {
+      const schoolId = school.id;
+
+      // ✅ 1. Approve school
+      await updateDoc(doc(db, "schools", schoolId), {
+        approved: true,
+      });
+
+      // ✅ 2. Create Club
+      await setDoc(doc(db, "clubs", schoolId), {
+        clubName: "W2WA Environmental Management Club",
+        schoolId: schoolId,
+        membersCount: 0,
+        createdAt: serverTimestamp(),
+      });
+
+      // ✅ 3. Create Programme Launch
+      await setDoc(doc(db, "clubActivities", `${schoolId}_launch`), {
+        title: "W2WA-EMC Programme Launch",
+        schoolId: schoolId,
+        type: "onboarding",
+        status: "Pending",
+        createdAt: serverTimestamp(),
+      });
+
+      alert("✅ School approved and initialized");
+
+      // Refresh list
+      fetchSchools();
+
+    } catch (error) {
+      console.error(error);
+      alert("❌ Error approving school");
+    }
+  };
+
   return (
-    <div style={styles.container}>
+    <div style={{ padding: "20px" }}>
       <h2>Admin Approvals</h2>
 
-      {loading ? (
-        <p>Loading schools...</p>
-      ) : schools.length === 0 ? (
-        <p>No schools registered.</p>
+      {schools.length === 0 ? (
+        <p>No pending schools</p>
       ) : (
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th>School Name</th>
-              <th>Email</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {schools.map((school) => (
-              <tr key={school.id}>
-                <td>{school.name || "N/A"}</td>
-                <td>{school.email || "N/A"}</td>
-                <td>
-                  {school.approved ? (
-                    <span style={styles.approved}>Approved</span>
-                  ) : (
-                    <span style={styles.pending}>Pending</span>
-                  )}
-                </td>
-                <td>
-                  {!school.approved && (
-                    <button
-                      style={styles.button}
-                      onClick={() => approveSchool(school.id)}
-                    >
-                      Approve
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
-}
-
-const styles = {
-  container: {
-    padding: "20px",
-    fontFamily: "Arial, sans-serif",
-  },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    marginTop: "20px",
-  },
-  button: {
-    padding: "6px 12px",
-    backgroundColor: "#28a745",
-    color: "#fff",
-    border: "none",
-    cursor: "pointer",
-    borderRadius: "4px",
-  },
-  approved: {
-    color: "green",
-    fontWeight: "bold",
-  },
-  pending: {
-    color: "orange",
-    fontWeight: "bold",
-  },
-};
+        <table border="1" cellPadding="10">
