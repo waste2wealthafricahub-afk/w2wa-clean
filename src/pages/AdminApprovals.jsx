@@ -77,3 +77,29 @@ export default function AdminApprovals() {
         <p>No pending schools</p>
       ) : (
         <table border="1" cellPadding="10">
+          <thead>
+            <tr>
+              <th>School Name</th>
+              <th>Email</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {schools.map((school) => (
+              <tr key={school.id}>
+                <td>{school.schoolName}</td>
+                <td>{school.email}</td>
+                <td>
+                  <button onClick={() => approveSchool(school)}>
+                    Approve
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
