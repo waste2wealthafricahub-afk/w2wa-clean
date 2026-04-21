@@ -1,3 +1,12 @@
+import { Link } from "react-router-dom";
+
+<h1>Admin Dashboard</h1>
+
+<Link to="/admin-approvals">
+  <button style={{ marginBottom: "20px", padding: "10px 15px" }}>
+    Approve Schools
+  </button>
+</Link>
 import { useEffect, useState } from "react";
 import { db } from "../services/firebase";
 import { collection, getDocs } from "firebase/firestore";

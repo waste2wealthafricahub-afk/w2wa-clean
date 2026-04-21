@@ -1,105 +1,114 @@
 import { useEffect, useState } from "react";
-import { db } from "../services/firebase";
+import { db } from "../firebase";
 import {
   collection,
   getDocs,
-  doc,
   updateDoc,
-  setDoc,
-  serverTimestamp
+  doc,
+  addDoc,
 } from "firebase/firestore";
 
-export default function AdminApprovals() {
+function AdminApprovals() {
   const [schools, setSchools] = useState([]);
 
-  // 🔹 Fetch unapproved schools
+  // Fetch all schools
   const fetchSchools = async () => {
     const snapshot = await getDocs(collection(db, "schools"));
-
-    const data = snapshot.docs.map((docItem) => ({
-      id: docItem.id,
-      ...docItem.data(),
+    const list = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
     }));
-
-    // Only show unapproved schools
-    const pending = data.filter((s) => !s.approved);
-
-    setSchools(pending);
+    setSchools(list);
   };
 
   useEffect(() => {
     fetchSchools();
   }, []);
 
-  // 🔥 APPROVE FUNCTION (CORE LOGIC)
+  // APPROVE SCHOOL + AUTO CREATE SYSTEM DATA
   const approveSchool = async (school) => {
     try {
-      const schoolId = school.id;
+      const schoolRef = doc(db, "schools", school.id);
 
-      // ✅ 1. Approve school
-      await updateDoc(doc(db, "schools", schoolId), {
-        approved: true,
+      // 1. Approve school
+      await updateDoc(schoolRef, {
+        status: "approved",
+        approvedAt: new Date(),
       });
 
-      // ✅ 2. Create Club
-      await setDoc(doc(db, "clubs", schoolId), {
-        clubName: "W2WA Environmental Management Club",
-        schoolId: schoolId,
-        membersCount: 0,
-        createdAt: serverTimestamp(),
+      // 2. Create Environmental Club
+      await addDoc(collection(db, "clubs"), {
+        schoolId: school.id,
+        schoolName: school.name,
+        clubName: "W2WA Environmental Club",
+        status: "active",
+        createdAt: new Date(),
       });
 
-      // ✅ 3. Create Programme Launch
-      await setDoc(doc(db, "clubActivities", `${schoolId}_launch`), {
-        title: "W2WA-EMC Programme Launch",
-        schoolId: schoolId,
-        type: "onboarding",
-        status: "Pending",
-        createdAt: serverTimestamp(),
+      // 3. Create Programme Launch
+      await addDoc(collection(db, "programmes"), {
+        schoolId: school.id,
+        type: "Programme Launch",
+        status: "completed",
+        date: new Date(),
       });
 
-      alert("✅ School approved and initialized");
+      // 4. Start Weekly Training
+      await addDoc(collection(db, "weeklyTraining"), {
+        schoolId: school.id,
+        week: 1,
+        topic: "Introduction to Waste Management",
+        status: "pending",
+        createdAt: new Date(),
+      });
 
-      // Refresh list
+      alert("School approved and system activated!");
       fetchSchools();
-
     } catch (error) {
       console.error(error);
-      alert("❌ Error approving school");
+      alert("Error approving school");
     }
   };
 
   return (
     <div style={{ padding: "20px" }}>
-      <h2>Admin Approvals</h2>
+      <h2>Pending School Approvals</h2>
 
-      {schools.length === 0 ? (
+      {schools.filter((s) => s.status !== "approved").length === 0 && (
         <p>No pending schools</p>
-      ) : (
-        <table border="1" cellPadding="10">
-          <thead>
-            <tr>
-              <th>School Name</th>
-              <th>Email</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {schools.map((school) => (
-              <tr key={school.id}>
-                <td>{school.schoolName}</td>
-                <td>{school.email}</td>
-                <td>
-                  <button onClick={() => approveSchool(school)}>
-                    Approve
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       )}
+
+      {schools
+        .filter((s) => s.status !== "approved")
+        .map((school) => (
+          <div
+            key={school.id}
+            style={{
+              border: "1px solid #ccc",
+              marginBottom: "10px",
+              padding: "10px",
+              borderRadius: "8px",
+            }}
+          >
+            <h3>{school.name}</h3>
+            <p>{school.email}</p>
+
+            <button
+              onClick={() => approveSchool(school)}
+              style={{
+                padding: "8px 12px",
+                background: "green",
+                color: "white",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Approve
+            </button>
+          </div>
+        ))}
     </div>
   );
 }
+
+export default AdminApprovals;
