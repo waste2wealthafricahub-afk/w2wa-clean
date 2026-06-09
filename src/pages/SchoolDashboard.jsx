@@ -1,122 +1,292 @@
-import { useEffect, useState } from "react";
-import { db, auth } from "../services/firebase";
+import React, {
+  useEffect,
+  useState,
+} from "react";
+
 import {
   collection,
-  getDocs,
   query,
-  where
+  where,
+  getDocs,
+  orderBy,
+  limit,
 } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
+
+import {
+  auth,
+  db,
+} from "../firebase";
 
 export default function SchoolDashboard() {
-  const [club, setClub] = useState(null);
-  const [programmeLaunch, setProgrammeLaunch] = useState(null);
-  const [trainingCount, setTrainingCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+
+  const [schoolData,
+    setSchoolData] =
+    useState(null);
+
+  const [totalWaste,
+    setTotalWaste] =
+    useState(0);
+
+  const [recyclingValue,
+    setRecyclingValue] =
+    useState(0);
+
+  const [collectionsCount,
+    setCollectionsCount] =
+    useState(0);
+
+  const [recentLogs,
+    setRecentLogs] =
+    useState([]);
+
+  const [loading,
+    setLoading] =
+    useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    loadDashboard();
+  }, []);
+
+  const loadDashboard = async () => {
+
+    try {
+
+      const user = auth.currentUser;
+
       if (!user) {
         setLoading(false);
         return;
       }
 
-      try {
-        const schoolEmail = user.email;
+      const schoolQuery = query(
+        collection(db, "schools"),
+        where(
+          "email",
+          "==",
+          user.email
+        )
+      );
 
-        // 🔹 1. Get School
-        const schoolSnap = await getDocs(
-          query(collection(db, "schools"), where("email", "==", schoolEmail))
-        );
+      const schoolSnapshot =
+        await getDocs(schoolQuery);
 
-        if (schoolSnap.empty) {
-          console.log("No school found");
-          setLoading(false);
-          return;
-        }
-
-        const schoolDoc = schoolSnap.docs[0];
-        const schoolId = schoolDoc.id;
-
-        // 🔹 2. Get Club
-        const clubSnap = await getDocs(
-          query(collection(db, "clubs"), where("schoolId", "==", schoolId))
-        );
-
-        if (!clubSnap.empty) {
-          setClub(clubSnap.docs[0].data());
-        }
-
-        // 🔹 3. Get Programme Launch
-        const launchSnap = await getDocs(
-          query(
-            collection(db, "clubActivities"),
-            where("schoolId", "==", schoolId),
-            where("type", "==", "onboarding")
-          )
-        );
-
-        if (!launchSnap.empty) {
-          setProgrammeLaunch(launchSnap.docs[0].data());
-        }
-
-        // 🔹 4. Get Training Sessions
-        const trainingSnap = await getDocs(
-          query(
-            collection(db, "trainingSessions"),
-            where("schoolId", "==", schoolId)
-          )
-        );
-
-        setTrainingCount(trainingSnap.size);
-
-      } catch (error) {
-        console.error("Dashboard error:", error);
-      } finally {
+      if (schoolSnapshot.empty) {
         setLoading(false);
+        return;
       }
-    });
 
-    return () => unsubscribe();
-  }, []);
+      const school =
+        schoolSnapshot.docs[0].data();
+
+      setSchoolData(school);
+
+      const schoolId =
+        school.schoolId;
+
+      const logsQuery = query(
+        collection(db, "recyclingLogs"),
+        where(
+          "schoolId",
+          "==",
+          schoolId
+        )
+      );
+
+      const logsSnapshot =
+        await getDocs(logsQuery);
+
+      let waste = 0;
+      let value = 0;
+
+      logsSnapshot.forEach((doc) => {
+
+        const data = doc.data();
+
+        waste += Number(
+          data.totalWeight || 0
+        );
+
+        value += Number(
+          data.totalValue || 0
+        );
+      });
+
+      setTotalWaste(waste);
+
+      setRecyclingValue(value);
+
+      setCollectionsCount(
+        logsSnapshot.size
+      );
+
+      const recentQuery = query(
+        collection(db, "recyclingLogs"),
+        where(
+          "schoolId",
+          "==",
+          schoolId
+        ),
+        orderBy(
+          "createdAt",
+          "desc"
+        ),
+        limit(5)
+      );
+
+      const recentSnapshot =
+        await getDocs(recentQuery);
+
+      const logs = [];
+
+      recentSnapshot.forEach((doc) => {
+        logs.push(doc.data());
+      });
+
+      setRecentLogs(logs);
+
+      setLoading(false);
+
+    } catch (error) {
+
+      console.error(error);
+
+      setLoading(false);
+    }
+  };
 
   if (loading) {
-    return <p style={{ padding: "20px" }}>Loading...</p>;
+    return (
+      <div style={{ padding: "30px" }}>
+        <h2>
+          Loading School Dashboard...
+        </h2>
+      </div>
+    );
   }
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>School Dashboard</h2>
+    <div
+      style={{
+        padding: "20px",
+        background: "#f5f7fa",
+        minHeight: "100vh",
+      }}
+    >
 
-      {/* CLUB STATUS */}
-      <div style={cardStyle}>
-        <h3>Club Status</h3>
-        <p>{club ? "Established ✅" : "Not Created ❌"}</p>
+      <h1>
+        School Dashboard
+      </h1>
+
+      <h3>
+        {schoolData?.schoolName}
+      </h3>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "15px",
+          marginTop: "20px",
+        }}
+      >
+
+        <div style={styles.card}>
+          <h4>Total Waste</h4>
+          <h2>{totalWaste} kg</h2>
+        </div>
+
+        <div style={styles.card}>
+          <h4>Collections</h4>
+          <h2>{collectionsCount}</h2>
+        </div>
+
+        <div style={styles.card}>
+          <h4>Recycling Value</h4>
+          <h2>
+            ₦{recyclingValue.toLocaleString()}
+          </h2>
+        </div>
+
       </div>
 
-      {/* PROGRAMME LAUNCH */}
-      <div style={cardStyle}>
-        <h3>Programme Launch</h3>
-        <p>
-          {programmeLaunch
-            ? programmeLaunch.status || "Completed ✅"
-            : "Pending ❌"}
-        </p>
+      <div style={styles.section}>
+
+        <h2>
+          Recent Collections
+        </h2>
+
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th style={styles.th}>Plastic</th>
+              <th style={styles.th}>Paper</th>
+              <th style={styles.th}>Metal</th>
+              <th style={styles.th}>Value</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {recentLogs.map((log, index) => (
+              <tr key={index}>
+                <td style={styles.td}>
+                  {log.plastic} kg
+                </td>
+
+                <td style={styles.td}>
+                  {log.paper} kg
+                </td>
+
+                <td style={styles.td}>
+                  {log.metal} kg
+                </td>
+
+                <td style={styles.td}>
+                  ₦{log.totalValue}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
       </div>
 
-      {/* TRAINING PROGRESS */}
-      <div style={cardStyle}>
-        <h3>Training Progress</h3>
-        <p>{trainingCount} Sessions Completed</p>
-      </div>
     </div>
   );
 }
 
-// Simple styling
-const cardStyle = {
-  background: "#f5f5f5",
-  padding: "15px",
-  marginBottom: "15px",
-  borderRadius: "8px"
+const styles = {
+  card: {
+    background: "#fff",
+    padding: "20px",
+    borderRadius: "12px",
+    boxShadow:
+      "0 2px 8px rgba(0,0,0,0.08)",
+  },
+
+  section: {
+    background: "#fff",
+    padding: "20px",
+    borderRadius: "12px",
+    marginTop: "30px",
+  },
+
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    marginTop: "20px",
+  },
+
+  th: {
+    padding: "12px",
+    background: "#007bff",
+    color: "#fff",
+    textAlign: "left",
+  },
+
+  td: {
+    padding: "12px",
+    borderBottom:
+      "1px solid #ddd",
+  },
 };

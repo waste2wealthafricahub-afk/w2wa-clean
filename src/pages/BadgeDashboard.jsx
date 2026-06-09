@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { db } from "../services/firebase";
+import { db } from "../firebase";
 import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { calculateBadges } from "../utils/badgeEngine";export default function BadgeDashboard() {
   const [schools, setSchools] = useState([]);

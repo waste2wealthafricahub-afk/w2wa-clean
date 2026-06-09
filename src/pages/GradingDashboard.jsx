@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { db } from "../services/firebase";
+import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 import { getGrade } from "../utils/gradingSystem";
 

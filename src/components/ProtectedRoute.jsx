@@ -1,43 +1,184 @@
-import { Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { auth, db } from "../services/firebase";
-import { doc, getDoc } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
+import {
+  Navigate,
+} from "react-router-dom";
 
-export default function ProtectedRoute({ children, allowedRole }) {
-  const [loading, setLoading] = useState(true);
-  const [authorized, setAuthorized] = useState(false);
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  auth,
+  db,
+} from "../firebase";
+
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
+
+import {
+  onAuthStateChanged,
+} from "firebase/auth";
+
+export default function ProtectedRoute({
+  children,
+  allowedRole,
+}) {
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [authorized,
+    setAuthorized] =
+    useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        setAuthorized(false);
-        setLoading(false);
-        return;
-      }
 
-      try {
-        const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
+    const unsubscribe =
+      onAuthStateChanged(
+        auth,
+        async (user) => {
 
-        if (docSnap.exists()) {
-          const { role } = docSnap.data();
-          setAuthorized(role === allowedRole);
-        } else {
-          setAuthorized(false);
+          try {
+
+            if (!user) {
+              setAuthorized(false);
+              setLoading(false);
+              return;
+            }
+
+            // =====================
+            // ADMIN
+            // =====================
+            if (
+              allowedRole ===
+                "admin" &&
+              user.email ===
+        "waste2wealthafricahub@gmail.com"
+            ) {
+              setAuthorized(true);
+              setLoading(false);
+              return;
+            }
+
+            // =====================
+            // SCHOOL
+            // =====================
+            if (
+              allowedRole ===
+              "school"
+            ) {
+
+              const schoolQuery =
+                query(
+                  collection(
+                    db,
+                    "schools"
+                  ),
+                  where(
+                    "email",
+                    "==",
+                    user.email
+                  )
+                );
+
+              const schoolSnapshot =
+                await getDocs(
+                  schoolQuery
+                );
+
+              if (
+                !schoolSnapshot.empty
+              ) {
+                setAuthorized(true);
+              } else {
+                setAuthorized(false);
+              }
+
+              setLoading(false);
+              return;
+            }
+
+            // =====================
+            // REPRESENTATIVE
+            // =====================
+            if (
+              allowedRole ===
+              "representative"
+            ) {
+
+              const repQuery =
+                query(
+                  collection(
+                    db,
+                    "representatives"
+                  ),
+                  where(
+                    "email",
+                    "==",
+                    user.email
+                  )
+                );
+
+              const repSnapshot =
+                await getDocs(
+                  repQuery
+                );
+
+              if (
+                !repSnapshot.empty
+              ) {
+
+                const repData =
+                  repSnapshot.docs[0].data();
+
+                setAuthorized(
+                  repData.approved
+                );
+
+              } else {
+                setAuthorized(false);
+              }
+
+              setLoading(false);
+              return;
+            }
+
+            setAuthorized(false);
+
+          } catch (error) {
+
+            console.error(error);
+
+            setAuthorized(false);
+
+            setLoading(false);
+          }
         }
-      } catch (error) {
-        console.error("Authorization error:", error);
-        setAuthorized(false);
-      }
-
-      setLoading(false);
-    });
+      );
 
     return () => unsubscribe();
+
   }, [allowedRole]);
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) {
+    return (
+      <div
+        style={{
+          padding: "30px",
+        }}
+      >
+        <h2>Loading...</h2>
+      </div>
+    );
+  }
 
-  return authorized ? children : <Navigate to="/" />;
+  if (!authorized) {
+    return <Navigate to="/" />;
+  }
+
+  return children;
 }

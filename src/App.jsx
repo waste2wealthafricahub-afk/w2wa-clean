@@ -1,43 +1,95 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+} from "react-router-dom";
+
 import Login from "./pages/Login";
-import AdminDashboard from "./pages/AdminDashboard";
-import SchoolDashboard from "./pages/SchoolDashboard";
-import RepDashboard from "./pages/RepDashboard";
+
 import SchoolRegistration from "./pages/SchoolRegistration";
-import RepRegistration from "./pages/RepRegistration";
-import AdminApprovals from "./pages/AdminApprovals";
-function App() {
+
+import RepresentativeRegistration from "./pages/RepresentativeRegistration";
+
+import SchoolDashboard from "./pages/SchoolDashboard";
+
+import RepresentativeDashboard from "./pages/RepresentativeDashboard";
+
+import AdminDashboard from "./pages/AdminDashboard";
+
+import ProtectedRoute from "./components/ProtectedRoute";
+
+export default function App() {
+
   return (
-    <Router>
+
+    <BrowserRouter>
+
       <Routes>
-        {/* Authentication */}
-        <Route path="/" element={<Login />} />
 
-        {/* Online Registration */}
-       <Route path="/" element={<Login />} />
-<Route path="/school-registration" element={<SchoolRegistration />} />
-<Route path="/rep-registration" element={<RepRegistration />} />
-        {/* Dashboards */}
-        <Route path="/admin-dashboard" element={<AdminDashboard />} />
-        <Route path="/school-dashboard" element={<SchoolDashboard />} />
-        <Route path="/rep-dashboard" element={<RepDashboard />} />
+        {/* LOGIN */}
 
-        {/* Admin Controls */}
-        <Route path="/admin-approvals" element={<AdminApprovals />} />
-
-        {/* Fallback Route */}
         <Route
-          path="*"
+          path="/"
+          element={<Login />}
+        />
+
+        {/* REGISTRATIONS */}
+
+        <Route
+          path="/school-registration"
           element={
-            <div style={{ textAlign: "center", marginTop: "50px" }}>
-              <h2>404 - Page Not Found</h2>
-              <p>The page you are looking for does not exist.</p>
-            </div>
+            <SchoolRegistration />
           }
         />
+
+        <Route
+          path="/rep-registration"
+          element={
+            <RepresentativeRegistration />
+          }
+        />
+
+        {/* SCHOOL */}
+
+        <Route
+          path="/school-dashboard"
+          element={
+            <ProtectedRoute
+              allowedRole="school"
+            >
+              <SchoolDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* REPRESENTATIVE */}
+
+        <Route
+          path="/rep-dashboard"
+          element={
+            <ProtectedRoute
+              allowedRole="representative"
+            >
+              <RepresentativeDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ADMIN */}
+
+        <Route
+          path="/admin-dashboard"
+          element={
+            <ProtectedRoute
+              allowedRole="admin"
+            >
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+
       </Routes>
-    </Router>
+
+    </BrowserRouter>
   );
 }
-
-export default App;

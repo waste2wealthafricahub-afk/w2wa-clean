@@ -1,71 +1,77 @@
 import { useEffect, useState } from "react";
-import { db } from "../services/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { db, auth } from "../firebase";
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+} from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 
 export default function RepDashboard() {
   const [schools, setSchools] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchSchools = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "schools"));
-        const schoolList = snapshot.docs.map((doc) => ({
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+
+      // ✅ Get rep directly (no searching)
+      const repRef = doc(db, "representatives", user.uid);
+      const repSnap = await getDoc(repRef);
+
+      if (!repSnap.exists()) return;
+
+      const assignedIds = repSnap.data().assignedSchoolIds || [];
+
+      // Fetch schools
+      const schoolsSnap = await getDocs(collection(db, "schools"));
+
+      const filtered = schoolsSnap.docs
+        .map((doc) => ({
           id: doc.id,
           ...doc.data(),
-        }));
-        setSchools(schoolList);
-      } catch (error) {
-        console.error("Error fetching schools:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+        }))
+        .filter((s) => assignedIds.includes(s.id));
 
-    fetchSchools();
+      setSchools(filtered);
+    });
+
+    return () => unsubscribe();
   }, []);
-
-  if (loading) return <p style={{ padding: "20px" }}>Loading...</p>;
 
   return (
     <div style={{ padding: "20px" }}>
-      <h2>Representative Dashboard</h2>
+      <h2>Rep Dashboard</h2>
 
-      {schools.length === 0 ? (
-        <p>No schools assigned.</p>
-      ) : (
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th>School Name</th>
-              <th>Email</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {schools.map((school) => (
-              <tr key={school.id}>
-                <td>{school.name || "N/A"}</td>
-                <td>{school.email || "N/A"}</td>
-                <td>
-                  {school.approved ? (
-                    <span style={{ color: "green" }}>Approved</span>
-                  ) : (
-                    <span style={{ color: "orange" }}>Pending</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      {/* ACTION BUTTONS */}
+      <div style={{ marginBottom: "20px" }}>
+        <button onClick={() => navigate("/waste-entry")}>
+          Enter Waste
+        </button>
+
+        <button onClick={() => navigate("/wallet")}>
+          Wallet
+        </button>
+<button onClick={() => navigate("/notifications")}>
+  Notifications 🔔
+</button>
+        {/* ✅ THIS IS YOUR STEP 3 BUTTON */}
+        <button onClick={() => navigate("/rep-performance")}>
+          View Performance
+        </button>
+      </div>
+
+      <h3>My Schools</h3>
+
+      {schools.length === 0 && <p>No assigned schools</p>}
+
+      {schools.map((school) => (
+        <div key={school.id}>
+          <p>{school.schoolName}</p>
+        </div>
+      ))}
     </div>
   );
 }
-
-const styles = {
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-  },
-};

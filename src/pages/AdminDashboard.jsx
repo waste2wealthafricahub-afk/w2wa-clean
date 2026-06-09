@@ -1,240 +1,550 @@
-import { Link } from "react-router-dom";
+import React, {
+  useEffect,
+  useState,
+} from "react";
 
-<h1>Admin Dashboard</h1>
-
-<Link to="/admin-approvals">
-  <button style={{ marginBottom: "20px", padding: "10px 15px" }}>
-    Approve Schools
-  </button>
-</Link>
-import { useEffect, useState } from "react";
-import { db } from "../services/firebase";
-import { collection, getDocs } from "firebase/firestore";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer,
-} from "recharts";
+  collection,
+  getDocs,
+  updateDoc,
+  doc,
+} from "firebase/firestore";
+
+import { db } from "../firebase";
+
+const Card = ({ title, value }) => (
+  <div
+    style={{
+      background: "#fff",
+      padding: "20px",
+      borderRadius: "12px",
+      boxShadow:
+        "0 2px 8px rgba(0,0,0,0.08)",
+    }}
+  >
+    <h4
+      style={{
+        color: "#666",
+        marginBottom: "10px",
+      }}
+    >
+      {title}
+    </h4>
+
+    <h2>{value}</h2>
+  </div>
+);
 
 export default function AdminDashboard() {
-  const [schools, setSchools] = useState([]);
-  const [stats, setStats] = useState({
-    totalWaste: 0,
-    totalValue: 0,
-    topSchool: "-",
-    highestValue: 0,
-    average: 0,
-  });
-  const [counts, setCounts] = useState({
-    schools: 0,
-    reps: 0,
-    trainings: 0,
-    clubs: 0,
-  });
-  const [loading, setLoading] = useState(true);
 
+  // =========================
+  // STATES
+  // =========================
+  const [schools, setSchools] =
+    useState([]);
+
+  const [representatives,
+    setRepresentatives] =
+    useState([]);
+
+  const [logs, setLogs] =
+    useState([]);
+
+  const [trainingSessions,
+    setTrainingSessions] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  // =========================
+  // LOAD DASHBOARD DATA
+  // =========================
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const logsSnap = await getDocs(collection(db, "recyclingLogs"));
-        const schoolsSnap = await getDocs(collection(db, "schools"));
-        const repsSnap = await getDocs(collection(db, "reps"));
-        const trainingsSnap = await getDocs(collection(db, "trainingSessions"));
-        const clubsSnap = await getDocs(collection(db, "clubs"));
-
-        // Dashboard counts
-        setCounts({
-          schools: schoolsSnap.size,
-          reps: repsSnap.size,
-          trainings: trainingsSnap.size,
-          clubs: clubsSnap.size,
-        });
-
-        // Map school document IDs to school names
-        const schoolMap = {};
-schoolsSnap.forEach((doc) => {
-  const data = doc.data();
-  schoolMap[doc.id] =
-    data.schoolName ||
-    data.name ||
-    "Unnamed School";
-});
-
-        // Aggregate recycling logs
-        const schoolData = {};
-
-        logsSnap.forEach((doc) => {
-          const data = doc.data();
-          const schoolId = data.schoolId;
-
-          if (!schoolId) return;
-
-          if (!schoolData[schoolId]) {
-            schoolData[schoolId] = {
-              schoolId,
-              name: schoolMap[schoolId] || "Not Linked",
-              waste: 0,
-              value: 0,
-            };
-          }
-
-          const waste =
-            (Number(data.metal) || 0) +
-            (Number(data.plastic) || 0) +
-            (Number(data.paper) || 0);
-
-          const value = Number(data.totalValue) || 0;
-
-          schoolData[schoolId].waste += waste;
-          schoolData[schoolId].value += value;
-        });
-
-        const result = Object.values(schoolData).sort(
-          (a, b) => b.value - a.value
-        );
-
-        setSchools(result);
-
-        // 📊 Compute analytics
-        let totalWaste = 0;
-        let totalValue = 0;
-        let highestValue = 0;
-        let topSchool = "-";
-
-        result.forEach((school) => {
-          totalWaste += school.waste;
-          totalValue += school.value;
-
-          if (school.value > highestValue) {
-            highestValue = school.value;
-            topSchool = school.name;
-          }
-        });
-
-        const average =
-          result.length > 0
-            ? (totalWaste / result.length).toFixed(2)
-            : 0;
-
-        setStats({
-          totalWaste,
-          totalValue,
-          topSchool,
-          highestValue,
-          average,
-        });
-
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching admin data:", error);
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    fetchDashboardData();
   }, []);
 
-  if (loading) return <p>Loading...</p>;
+  const fetchDashboardData = async () => {
 
-  return (
-    <div style={{ padding: "20px" }}>
-      <h2>Admin Dashboard</h2>
+    try {
 
-      {/* SUMMARY CARDS */}
-      <div style={{ display: "flex", gap: "20px", marginBottom: "20px", flexWrap: "wrap" }}>
-        <StatCard title="Schools" value={counts.schools} />
-        <StatCard title="Reps" value={counts.reps} />
-        <StatCard title="Trainings" value={counts.trainings} />
-        <StatCard title="Clubs" value={counts.clubs} />
-      </div>
+      // =====================
+      // SCHOOLS
+      // =====================
+      const schoolsSnapshot =
+        await getDocs(
+          collection(db, "schools")
+        );
 
-      {/* LEADERBOARD */}
-      <h3>🏆 School Leaderboard</h3>
-      <table
-        width="100%"
-        border="1"
-        cellPadding="8"
-        style={{ borderCollapse: "collapse" }}
-      >
-        <thead style={{ background: "#f0f0f0" }}>
-          <tr>
-            <th>#</th>
-            <th>School</th>
-            <th>Waste (kg)</th>
-            <th>Value (₦)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {schools.map((s, index) => (
-            <tr key={index}>
-              <td>{index + 1}</td>
-              <td>{s.name}</td>
-              <td>{s.waste}</td>
-              <td>₦{s.value.toLocaleString()}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      const schoolsList =
+        schoolsSnapshot.docs.map(
+          (doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })
+        );
 
-      {/* CHART */}
-      <h3 style={{ marginTop: "30px" }}>📊 Waste Collection Chart</h3>
-<div style={{ width: "100%", height: "400px", minHeight: "300px" }}>
-  {schools.length > 0 ? (
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={schools}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="name" />
-        <YAxis />
-        <Tooltip />
-        <Bar dataKey="value" fill="#2c7be5" />
-      </BarChart>
-    </ResponsiveContainer>
-  ) : (
-    <p>No data available</p>
-  )}
-</div>
+      setSchools(schoolsList);
 
-      {/* ANALYTICS */}
-      <h3 style={{ marginTop: "30px" }}>📈 Analytics</h3>
-      <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-        <StatCard title="Top School" value={stats.topSchool} />
-        <StatCard
-          title="Highest Value"
-          value={`₦${stats.highestValue.toLocaleString()}`}
-        />
-        <StatCard
-          title="Total Waste"
-          value={`${stats.totalWaste} kg`}
-        />
-        <StatCard
-          title="Average / School"
-          value={`${stats.average} kg`}
-        />
-      </div>
-    </div>
+      // =====================
+      // REPRESENTATIVES
+      // =====================
+      const repsSnapshot =
+        await getDocs(
+          collection(
+            db,
+            "representatives"
+          )
+        );
+
+      const repsList =
+        repsSnapshot.docs.map(
+          (doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })
+        );
+
+      setRepresentatives(
+        repsList
+      );
+
+      // =====================
+      // RECYCLING LOGS
+      // =====================
+      const logsSnapshot =
+        await getDocs(
+          collection(
+            db,
+            "recyclingLogs"
+          )
+        );
+
+      const logsList =
+        logsSnapshot.docs.map(
+          (doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })
+        );
+
+      setLogs(logsList);
+
+      // =====================
+      // TRAINING SESSIONS
+      // =====================
+      const trainingSnapshot =
+        await getDocs(
+          collection(
+            db,
+            "trainingSessions"
+          )
+        );
+
+      const trainingList =
+        trainingSnapshot.docs.map(
+          (doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })
+        );
+
+      setTrainingSessions(
+        trainingList
+      );
+
+      setLoading(false);
+
+    } catch (error) {
+
+      console.error(error);
+
+      setLoading(false);
+    }
+  };
+
+  // =========================
+  // APPROVE REPRESENTATIVE
+  // =========================
+  const approveRepresentative =
+    async (id) => {
+
+    try {
+
+      await updateDoc(
+        doc(
+          db,
+          "representatives",
+          id
+        ),
+        {
+          approved: true,
+        }
+      );
+
+      alert(
+        "Representative approved"
+      );
+
+      fetchDashboardData();
+
+    } catch (error) {
+
+      console.error(error);
+    }
+  };
+
+  // =========================
+  // APPROVE SCHOOL
+  // =========================
+  const approveSchool = async (
+    id
+  ) => {
+
+    try {
+
+      await updateDoc(
+        doc(db, "schools", id),
+        {
+          approved: true,
+          status: "approved",
+        }
+      );
+
+      alert("School approved");
+
+      fetchDashboardData();
+
+    } catch (error) {
+
+      console.error(error);
+    }
+  };
+
+  // =========================
+  // CALCULATIONS
+  // =========================
+
+  const totalWaste = logs.reduce(
+    (sum, item) =>
+      sum +
+      Number(item.totalWeight || 0),
+    0
   );
-}
 
-/* Reusable Stat Card */
-function StatCard({ title, value }) {
+  const totalValue = logs.reduce(
+    (sum, item) =>
+      sum +
+      Number(item.totalValue || 0),
+    0
+  );
+
+  const totalStudents =
+    trainingSessions.reduce(
+      (sum, item) =>
+        sum +
+        Number(
+          item.studentsReached || 0
+        ),
+      0
+    );
+
+  // =========================
+  // LOADING
+  // =========================
+  if (loading) {
+    return (
+      <div style={{ padding: "30px" }}>
+        <h2>
+          Loading Admin Dashboard...
+        </h2>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
-        background: "#f4f6f9",
         padding: "20px",
-        borderRadius: "10px",
-        boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-        minWidth: "150px",
-        textAlign: "center",
-        flex: "1",
+        background: "#f5f7fa",
+        minHeight: "100vh",
       }}
     >
-      <h4>{title}</h4>
-      <p style={{ fontSize: "20px", fontWeight: "bold" }}>{value}</p>
+
+      {/* HEADER */}
+      <div
+        style={{
+          marginBottom: "30px",
+        }}
+      >
+        <h1>
+          Admin Dashboard
+        </h1>
+
+        <p>
+          W2WASCHOOL Environmental
+          Management System
+        </p>
+      </div>
+
+      {/* METRICS */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "15px",
+          marginBottom: "30px",
+        }}
+      >
+        <Card
+          title="Registered Schools"
+          value={schools.length}
+        />
+
+        <Card
+          title="Representatives"
+          value={representatives.length}
+        />
+
+        <Card
+          title="Students Trained"
+          value={totalStudents}
+        />
+
+        <Card
+          title="Total Waste"
+          value={`${totalWaste} kg`}
+        />
+
+        <Card
+          title="Recycling Value"
+          value={`₦${totalValue.toLocaleString()}`}
+        />
+      </div>
+
+      {/* SCHOOL APPROVALS */}
+      <div
+        style={styles.section}
+      >
+        <h2>
+          School Approvals
+        </h2>
+
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th style={styles.th}>
+                School
+              </th>
+
+              <th style={styles.th}>
+                Email
+              </th>
+
+              <th style={styles.th}>
+                Status
+              </th>
+
+              <th style={styles.th}>
+                Action
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {schools.map((school) => (
+              <tr key={school.id}>
+                <td style={styles.td}>
+                  {school.schoolName}
+                </td>
+
+                <td style={styles.td}>
+                  {school.email}
+                </td>
+
+                <td style={styles.td}>
+                  {school.approved
+                    ? "Approved"
+                    : "Pending"}
+                </td>
+
+                <td style={styles.td}>
+                  {!school.approved && (
+                    <button
+                      style={styles.button}
+                      onClick={() =>
+                        approveSchool(
+                          school.id
+                        )
+                      }
+                    >
+                      Approve
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* REPRESENTATIVE APPROVALS */}
+      <div
+        style={styles.section}
+      >
+        <h2>
+          Representative Approvals
+        </h2>
+
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th style={styles.th}>
+                Name
+              </th>
+
+              <th style={styles.th}>
+                Email
+              </th>
+
+              <th style={styles.th}>
+                Approved
+              </th>
+
+              <th style={styles.th}>
+                Action
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {representatives.map(
+              (rep) => (
+                <tr key={rep.id}>
+                  <td style={styles.td}>
+                    {rep.fullName}
+                  </td>
+
+                  <td style={styles.td}>
+                    {rep.email}
+                  </td>
+
+                  <td style={styles.td}>
+                    {rep.approved
+                      ? "Yes"
+                      : "No"}
+                  </td>
+
+                  <td style={styles.td}>
+                    {!rep.approved && (
+                      <button
+                        style={styles.button}
+                        onClick={() =>
+                          approveRepresentative(
+                            rep.id
+                          )
+                        }
+                      >
+                        Approve
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              )
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* RECENT COLLECTIONS */}
+      <div style={styles.section}>
+        <h2>
+          Recent Collections
+        </h2>
+
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th style={styles.th}>
+                School ID
+              </th>
+
+              <th style={styles.th}>
+                Weight
+              </th>
+
+              <th style={styles.th}>
+                Value
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {logs.map((log) => (
+              <tr key={log.id}>
+                <td style={styles.td}>
+                  {log.schoolId}
+                </td>
+
+                <td style={styles.td}>
+                  {log.totalWeight} kg
+                </td>
+
+                <td style={styles.td}>
+                  ₦
+                  {Number(
+                    log.totalValue || 0
+                  ).toLocaleString()}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
     </div>
   );
 }
+
+// =========================
+// STYLES
+// =========================
+const styles = {
+  section: {
+    background: "#fff",
+    padding: "20px",
+    borderRadius: "12px",
+    marginBottom: "30px",
+    boxShadow:
+      "0 2px 8px rgba(0,0,0,0.08)",
+  },
+
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    marginTop: "20px",
+  },
+
+  th: {
+    padding: "12px",
+    background: "#007bff",
+    color: "#fff",
+    textAlign: "left",
+  },
+
+  td: {
+    padding: "12px",
+    borderBottom:
+      "1px solid #ddd",
+  },
+
+  button: {
+    padding: "8px 14px",
+    background: "green",
+    color: "#fff",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+  },
+};

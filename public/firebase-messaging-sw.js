@@ -1,0 +1,14 @@
+importScripts("https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js");
+
+firebase.initializeApp({
+  VITE_API_KEY=AIzaSyAdzDwG7V81YmpyZN75hyQAug8LvRYJh5M
+VITE_AUTH_DOMAIN=w2waschool-project.firebaseapp.com
+VITE_PROJECT_ID=w2waschool-project
+VITE_STORAGE_BUCKET=w2waschool-project.appspot.com
+VITE_MESSAGING_SENDER_ID=826616762358
+VITE_APP_ID=1:826616762358:web:c4ecb79bfc1e799d10c1d7
+VITE_MEASUREMENT_ID=G-TWQJT9T68S
+});
+
+const messaging = firebase.messaging();
