@@ -1,60 +1,45 @@
 import { useState } from "react";
-
-import {
-  createUserWithEmailAndPassword,
-} from "firebase/auth";
-
-import {
-  auth,
-  db,
-} from "../firebase";
-
-import {
-  collection,
-  addDoc,
-  doc,
-  setDoc,
-} from "firebase/firestore";
-
-import {
-  useNavigate,
-} from "react-router-dom";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "../firebase";
+import { doc, setDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
 export default function SchoolRegistration() {
-
   const navigate = useNavigate();
 
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const [formData, setFormData] =
-    useState({
-      schoolName: "",
-      teacherName: "",
-      email: "",
-      password: "",
-      phone: "",
-      state: "",
-      address: "",
-    });
+  const [formData, setFormData] = useState({
+    schoolName: "",
+    teacherName: "",
+    email: "",
+    password: "",
+    phone: "",
+    state: "",
+    address: "",
+  });
 
   const handleChange = (e) => {
-
     setFormData({
       ...formData,
-      [e.target.name]:
-        e.target.value,
+      [e.target.name]: e.target.value,
     });
   };
 
-  const handleSubmit = async (e) => {
+  const generateSchoolId = (schoolName) => {
+    return schoolName
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .toLowerCase();
+  };
 
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (loading) return;
 
     setLoading(true);
 
     try {
-
       const userCredential =
         await createUserWithEmailAndPassword(
           auth,
@@ -62,14 +47,22 @@ export default function SchoolRegistration() {
           formData.password
         );
 
-      const schoolId =
-        formData.schoolName
-          .replace(/\s+/g, "")
-          .toLowerCase();
+      const uid = userCredential.user.uid;
 
-      await addDoc(
-        collection(db, "schools"),
+      const schoolId = generateSchoolId(
+        formData.schoolName
+      );
+
+      // ==========================
+      // SCHOOL DOCUMENT
+      // ==========================
+      await setDoc(
+        doc(db, "schools", uid),
         {
+          uid,
+
+          schoolId,
+
           schoolName:
             formData.schoolName,
 
@@ -82,13 +75,11 @@ export default function SchoolRegistration() {
           phone:
             formData.phone,
 
-          address:
-            formData.address,
-
           state:
             formData.state,
 
-          schoolId,
+          address:
+            formData.address,
 
           role: "school",
 
@@ -96,33 +87,45 @@ export default function SchoolRegistration() {
 
           status: "pending",
 
-          uid:
-            userCredential.user.uid,
+          clubCode: "EMCCC",
 
-          createdAt:
-            new Date(),
+          clubName:
+            "Environmental Management and Climate Change Club",
+
+          createdAt: new Date(),
         }
       );
-await setDoc(
-  doc(db, "schoolWallets", schoolId),
-  {
-    schoolId,
-    balance: 0,
-    totalEarned: 0,
-    totalDeductions: 0,
-    createdAt: new Date(),
-  }
-);
+
+      // ==========================
+      // SCHOOL WALLET
+      // ==========================
+      await setDoc(
+        doc(
+          db,
+          "schoolWallets",
+          schoolId
+        ),
+        {
+          schoolId,
+
+          balance: 0,
+
+          totalEarned: 0,
+
+          totalDeductions: 0,
+
+          createdAt: new Date(),
+        }
+      );
+
       alert(
-        "School registered successfully"
+        "School registration submitted successfully."
       );
 
       navigate("/");
 
     } catch (error) {
-
       console.error(error);
-
       alert(error.message);
     }
 
@@ -130,35 +133,20 @@ await setDoc(
   };
 
   return (
+    <div style={styles.page}>
+      <div style={styles.card}>
+        <div style={styles.header}>
+          <h1 style={styles.title}>
+            School Registration
+          </h1>
 
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#f5f7fa",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        padding: "20px",
-      }}
-    >
-
-      <div
-        style={{
-          background: "#fff",
-          padding: "30px",
-          borderRadius: "12px",
-          width: "450px",
-          boxShadow:
-            "0 4px 12px rgba(0,0,0,0.1)",
-        }}
-      >
-
-        <h2>
-          School Registration
-        </h2>
+          <p style={styles.subtitle}>
+            Environmental Management and
+            Climate Change Club (EMCCC)
+          </p>
+        </div>
 
         <form onSubmit={handleSubmit}>
-
           <input
             type="text"
             name="schoolName"
@@ -180,7 +168,7 @@ await setDoc(
           <input
             type="email"
             name="email"
-            placeholder="Email"
+            placeholder="School Email"
             required
             onChange={handleChange}
             style={styles.input}
@@ -213,13 +201,12 @@ await setDoc(
             style={styles.input}
           />
 
-          <input
-            type="text"
+          <textarea
             name="address"
             placeholder="School Address"
             required
             onChange={handleChange}
-            style={styles.input}
+            style={styles.textarea}
           />
 
           <button
@@ -231,35 +218,81 @@ await setDoc(
               ? "Registering..."
               : "Register School"}
           </button>
-
         </form>
-
       </div>
-
     </div>
   );
 }
 
 const styles = {
+  page: {
+    minHeight: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: "20px",
+    background:
+      "linear-gradient(135deg,#e8f4ff,#f5f7fa)",
+  },
+
+  card: {
+    width: "100%",
+    maxWidth: "520px",
+    background: "#fff",
+    padding: "35px",
+    borderRadius: "18px",
+    boxShadow:
+      "0 10px 30px rgba(0,0,0,0.08)",
+  },
+
+  header: {
+    textAlign: "center",
+    marginBottom: "25px",
+  },
+
+  title: {
+    margin: 0,
+    color: "#1f2937",
+  },
+
+  subtitle: {
+    color: "#6b7280",
+    marginTop: "10px",
+    fontSize: "14px",
+  },
 
   input: {
     width: "100%",
-    padding: "12px",
-    marginTop: "12px",
-    borderRadius: "6px",
-    border: "1px solid #ccc",
+    padding: "14px",
+    marginBottom: "14px",
+    borderRadius: "10px",
+    border: "1px solid #d1d5db",
+    fontSize: "15px",
     boxSizing: "border-box",
+  },
+
+  textarea: {
+    width: "100%",
+    minHeight: "90px",
+    padding: "14px",
+    marginBottom: "14px",
+    borderRadius: "10px",
+    border: "1px solid #d1d5db",
+    fontSize: "15px",
+    boxSizing: "border-box",
+    resize: "vertical",
   },
 
   button: {
     width: "100%",
-    padding: "12px",
-    marginTop: "20px",
+    padding: "14px",
     border: "none",
-    borderRadius: "6px",
-    background: "#007bff",
+    borderRadius: "10px",
+    background: "#2563eb",
     color: "#fff",
+    fontSize: "16px",
+    fontWeight: "600",
     cursor: "pointer",
-    fontWeight: "bold",
+    marginTop: "10px",
   },
 };

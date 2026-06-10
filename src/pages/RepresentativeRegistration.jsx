@@ -1,159 +1,119 @@
 import { useState } from "react";
-
-import {
-  createUserWithEmailAndPassword,
-} from "firebase/auth";
-
-import {
-  auth,
-  db,
-} from "../firebase";
-
-import {
-  collection,
-  addDoc,
-} from "firebase/firestore";
-
-import {
-  useNavigate,
-} from "react-router-dom";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "../firebase";
+import { doc, setDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
 export default function RepresentativeRegistration() {
-
   const navigate = useNavigate();
 
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const [formData, setFormData] =
-    useState({
-      fullName: "",
-      email: "",
-      password: "",
-      phone: "",
-      address: "",
-      state: "",
-    });
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+    phone: "",
+    address: "",
+    state: "",
+  });
 
-  // ==========================
-  // HANDLE CHANGE
-  // ==========================
   const handleChange = (e) => {
-
     setFormData({
       ...formData,
-      [e.target.name]:
-        e.target.value,
+      [e.target.name]: e.target.value,
     });
   };
 
-  // ==========================
-  // REGISTER REPRESENTATIVE
-  // ==========================
   const handleSubmit = async (e) => {
-
     e.preventDefault();
+
+    if (loading) return;
 
     setLoading(true);
 
     try {
-
       const userCredential =
         await createUserWithEmailAndPassword(
           auth,
-          formData.email,
+          formData.email.trim(),
           formData.password
         );
 
-  await setDoc(
-  doc(
-    db,
-    "representatives",
-    userCredential.user.uid
-  ),
-  {
-    fullName: formData.fullName,
-    email: formData.email,
-    phone: formData.phone,
-    address: formData.address,
-    state: formData.state,
+      const uid = userCredential.user.uid;
 
-    role: "representative",
+      // CREATE REPRESENTATIVE
+      await setDoc(
+        doc(db, "representatives", uid),
+        {
+          uid,
+          fullName: formData.fullName.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          address: formData.address.trim(),
+          state: formData.state.trim(),
 
-    approved: false,
+          clubCode: "EMCCC",
 
-    assignedSchoolIds: [],
+          role: "representative",
 
-    walletBalance: 0,
+          approved: false,
 
-    uid: userCredential.user.uid,
+          assignedSchoolIds: [],
 
-    createdAt: new Date(),
-  }
-);
-  
-await setDoc(
-  doc(
-    db,
-    "repWallets",
-    userCredential.user.uid
-  ),
-  {
-    repId:
-      userCredential.user.uid,
+          createdAt: new Date(),
+        }
+      );
 
-    floatBalance: 0,
+      // CREATE REP WALLET
+      await setDoc(
+        doc(db, "repWallets", uid),
+        {
+          repId: uid,
 
-    totalPurchases: 0,
+          repName: formData.fullName.trim(),
 
-    totalLeviesPaid: 0,
+          floatBalance: 0,
 
-    createdAt: new Date(),
-  }
-);
+          totalPurchases: 0,
+
+          totalLeviesPaid: 0,
+
+          createdAt: new Date(),
+        }
+      );
+
       alert(
-        "Representative registration submitted successfully"
+        "Registration submitted successfully. Await administrator approval."
       );
 
       navigate("/");
 
     } catch (error) {
-
       console.error(error);
 
-      alert(error.message);
+      alert(
+        error.message ||
+          "Registration failed."
+      );
     }
 
     setLoading(false);
   };
 
   return (
+    <div style={styles.page}>
+      <div style={styles.card}>
 
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#f5f7fa",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        padding: "20px",
-      }}
-    >
+        <div style={styles.header}>
+          <h1 style={styles.title}>
+            Representative Registration
+          </h1>
 
-      <div
-        style={{
-          background: "#fff",
-          padding: "30px",
-          borderRadius: "12px",
-          width: "450px",
-          boxShadow:
-            "0 4px 12px rgba(0,0,0,0.1)",
-        }}
-      >
-
-        <h2>
-          Representative Registration
-        </h2>
+          <p style={styles.subtitle}>
+            Join the W2WASchool network as a waste collection representative.
+          </p>
+        </div>
 
         <form onSubmit={handleSubmit}>
 
@@ -161,17 +121,21 @@ await setDoc(
             type="text"
             name="fullName"
             placeholder="Full Name"
-            required
+            value={formData.fullName}
             onChange={handleChange}
+            required
+            disabled={loading}
             style={styles.input}
           />
 
           <input
             type="email"
             name="email"
-            placeholder="Email"
-            required
+            placeholder="Email Address"
+            value={formData.email}
             onChange={handleChange}
+            required
+            disabled={loading}
             style={styles.input}
           />
 
@@ -179,8 +143,10 @@ await setDoc(
             type="password"
             name="password"
             placeholder="Password"
-            required
+            value={formData.password}
             onChange={handleChange}
+            required
+            disabled={loading}
             style={styles.input}
           />
 
@@ -188,17 +154,21 @@ await setDoc(
             type="text"
             name="phone"
             placeholder="Phone Number"
-            required
+            value={formData.phone}
             onChange={handleChange}
+            required
+            disabled={loading}
             style={styles.input}
           />
 
           <input
             type="text"
             name="address"
-            placeholder="Address"
-            required
+            placeholder="Residential Address"
+            value={formData.address}
             onChange={handleChange}
+            required
+            disabled={loading}
             style={styles.input}
           />
 
@@ -206,8 +176,10 @@ await setDoc(
             type="text"
             name="state"
             placeholder="State"
-            required
+            value={formData.state}
             onChange={handleChange}
+            required
+            disabled={loading}
             style={styles.input}
           />
 
@@ -224,31 +196,68 @@ await setDoc(
         </form>
 
       </div>
-
     </div>
   );
 }
 
 const styles = {
+  page: {
+    minHeight: "100vh",
+    background:
+      "linear-gradient(135deg,#f5f7fa,#e8edf5)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: "20px",
+  },
+
+  card: {
+    width: "100%",
+    maxWidth: "520px",
+    background: "#fff",
+    borderRadius: "18px",
+    padding: "35px",
+    boxShadow:
+      "0 10px 30px rgba(0,0,0,0.08)",
+  },
+
+  header: {
+    marginBottom: "25px",
+    textAlign: "center",
+  },
+
+  title: {
+    margin: 0,
+    color: "#1f2937",
+  },
+
+  subtitle: {
+    marginTop: "8px",
+    color: "#6b7280",
+    fontSize: "14px",
+  },
 
   input: {
     width: "100%",
-    padding: "12px",
-    marginTop: "12px",
-    borderRadius: "6px",
-    border: "1px solid #ccc",
+    padding: "14px",
+    marginBottom: "14px",
+    borderRadius: "10px",
+    border: "1px solid #d1d5db",
+    fontSize: "15px",
     boxSizing: "border-box",
+    outline: "none",
   },
 
   button: {
     width: "100%",
-    padding: "12px",
-    marginTop: "20px",
+    padding: "14px",
     border: "none",
-    borderRadius: "6px",
-    background: "#007bff",
+    borderRadius: "10px",
+    background: "#16a34a",
     color: "#fff",
+    fontSize: "16px",
+    fontWeight: "600",
     cursor: "pointer",
-    fontWeight: "bold",
+    marginTop: "10px",
   },
 };
