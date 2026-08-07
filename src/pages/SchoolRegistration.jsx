@@ -16,6 +16,7 @@ export default function SchoolRegistration() {
     password: "",
     phone: "",
     state: "",
+    localGovernment: "",
     address: "",
   });
 
@@ -77,6 +78,9 @@ export default function SchoolRegistration() {
 
           state:
             formData.state,
+
+            localGovernment:
+            formData.localGovernment,
 
           address:
             formData.address,
@@ -196,6 +200,15 @@ export default function SchoolRegistration() {
             type="text"
             name="state"
             placeholder="State"
+            required
+            onChange={handleChange}
+            style={styles.input}
+          />
+
+          <input
+            type="text"
+            name="localGovernment"
+            placeholder="Local Government Area"
             required
             onChange={handleChange}
             style={styles.input}

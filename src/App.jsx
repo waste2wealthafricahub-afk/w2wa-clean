@@ -17,7 +17,10 @@ import RepresentativeDashboard from "./pages/RepresentativeDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 
 import ProtectedRoute from "./components/ProtectedRoute";
-
+import SchoolWalletDashboard from "./pages/SchoolWalletDashboard";
+import MonitoringDashboard from "./pages/MonitoringDashboard";
+import MonitorRegistration from "./pages/MonitorRegistration";
+import UserManagement from "./pages/UserManagement";
 export default function App() {
 
   return (
@@ -41,7 +44,12 @@ export default function App() {
             <SchoolRegistration />
           }
         />
-
+<Route
+  path="/monitor-registration"
+  element={
+    <MonitorRegistration />
+  }
+/>
         <Route
           path="/rep-registration"
           element={
@@ -61,7 +69,14 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
+        <Route
+          path="/school-wallet"
+          element={
+          <ProtectedRoute allowedRole="school">
+          <SchoolWalletDashboard />
+          </ProtectedRoute>
+           }
+        />
         {/* REPRESENTATIVE */}
 
         <Route
@@ -87,7 +102,24 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
+<Route
+  path="/monitoring-dashboard"
+  element={
+    <ProtectedRoute
+     allowedRole="monitor"
+    >
+      <MonitoringDashboard />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/user-management"
+  element={
+    <ProtectedRoute allowedRole="admin">
+      <UserManagement />
+    </ProtectedRoute>
+  }
+/>
       </Routes>
 
     </BrowserRouter>

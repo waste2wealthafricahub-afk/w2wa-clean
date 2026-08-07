@@ -1,49 +1,30 @@
-import {
-  Navigate,
-} from "react-router-dom";
-
-import {
-  useEffect,
-  useState,
-} from "react";
-
-import {
-  auth,
-  db,
-} from "../firebase";
-
+import { Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { auth, db } from "../firebase";
 import {
   collection,
   query,
   where,
   getDocs,
 } from "firebase/firestore";
-
-import {
-  onAuthStateChanged,
-} from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default function ProtectedRoute({
   children,
   allowedRole,
 }) {
-
   const [loading, setLoading] =
     useState(true);
 
-  const [authorized,
-    setAuthorized] =
+  const [authorized, setAuthorized] =
     useState(false);
 
   useEffect(() => {
-
     const unsubscribe =
       onAuthStateChanged(
         auth,
         async (user) => {
-
           try {
-
             if (!user) {
               setAuthorized(false);
               setLoading(false);
@@ -54,10 +35,9 @@ export default function ProtectedRoute({
             // ADMIN
             // =====================
             if (
-              allowedRole ===
-                "admin" &&
+              allowedRole === "admin" &&
               user.email ===
-        "waste2wealthafricahub@gmail.com"
+                "waste2wealthafricahub@gmail.com"
             ) {
               setAuthorized(true);
               setLoading(false);
@@ -68,10 +48,8 @@ export default function ProtectedRoute({
             // SCHOOL
             // =====================
             if (
-              allowedRole ===
-              "school"
+              allowedRole === "school"
             ) {
-
               const schoolQuery =
                 query(
                   collection(
@@ -102,6 +80,56 @@ export default function ProtectedRoute({
               return;
             }
 
+// =====================
+// MONITOR
+// =====================
+if (
+  allowedRole === "monitor"
+) {
+  // Admin can also access monitoring dashboard
+  if (
+    user.email ===
+    "waste2wealthafricahub@gmail.com"
+  ) {
+    setAuthorized(true);
+    setLoading(false);
+    return;
+  }
+
+  const monitorQuery =
+    query(
+      collection(
+        db,
+        "monitors"
+      ),
+      where(
+        "email",
+        "==",
+        user.email
+      )
+    );
+
+  const monitorSnapshot =
+    await getDocs(
+      monitorQuery
+    );
+
+  if (
+    !monitorSnapshot.empty
+  ) {
+    const monitorData =
+      monitorSnapshot.docs[0].data();
+
+    setAuthorized(
+      monitorData.approved
+    );
+  } else {
+    setAuthorized(false);
+  }
+
+  setLoading(false);
+  return;
+}
             // =====================
             // REPRESENTATIVE
             // =====================
@@ -109,7 +137,6 @@ export default function ProtectedRoute({
               allowedRole ===
               "representative"
             ) {
-
               const repQuery =
                 query(
                   collection(
@@ -131,14 +158,12 @@ export default function ProtectedRoute({
               if (
                 !repSnapshot.empty
               ) {
-
                 const repData =
                   repSnapshot.docs[0].data();
 
                 setAuthorized(
                   repData.approved
                 );
-
               } else {
                 setAuthorized(false);
               }
@@ -147,30 +172,25 @@ export default function ProtectedRoute({
               return;
             }
 
+            // FALLBACK
             setAuthorized(false);
+            setLoading(false);
+            return;
 
           } catch (error) {
-
             console.error(error);
-
             setAuthorized(false);
-
             setLoading(false);
           }
         }
       );
 
     return () => unsubscribe();
-
   }, [allowedRole]);
 
   if (loading) {
     return (
-      <div
-        style={{
-          padding: "30px",
-        }}
-      >
+      <div style={{ padding: "30px" }}>
         <h2>Loading...</h2>
       </div>
     );

@@ -10,6 +10,9 @@ import {
   getDocs,
   orderBy,
   limit,
+  doc,
+  getDoc,
+  setDoc,
 } from "firebase/firestore";
 
 import {
@@ -42,6 +45,21 @@ export default function SchoolDashboard() {
   const [loading,
     setLoading] =
     useState(true);
+    const [emcccData,
+  setEmcccData] =
+  useState(null);
+
+const [currentTraining,
+  setCurrentTraining] =
+  useState(null);
+
+const [attendance,
+  setAttendance] =
+  useState("");
+
+const [evidenceUrl,
+  setEvidenceUrl] =
+  useState("");
 
   useEffect(() => {
     loadDashboard();
@@ -82,6 +100,53 @@ export default function SchoolDashboard() {
 
       const schoolId =
         school.schoolId;
+        const emcccSnap =
+  await getDoc(
+    doc(
+      db,
+      "emcccSchools",
+      schoolId
+    )
+  );
+
+if (emcccSnap.exists()) {
+  const emccc =
+    emcccSnap.data();
+
+  setEmcccData(emccc);
+
+  const weekNumber =
+    emccc.nextTrainingWeek || 1;
+
+  const weekId =
+    `week${String(
+      weekNumber
+    ).padStart(2, "0")}`;
+
+  const trainingSnapshot =
+    await getDocs(
+      collection(
+        db,
+        "weeklyTraining"
+      )
+    );
+
+  const trainingDoc =
+    trainingSnapshot.docs.find(
+      (doc) =>
+        doc.id.startsWith(
+          weekId
+        )
+    );
+
+  if (trainingDoc) {
+    setCurrentTraining({
+      id:
+        trainingDoc.id,
+      ...trainingDoc.data(),
+    });
+  }
+}
 
       const logsQuery = query(
         collection(db, "recyclingLogs"),
@@ -153,7 +218,85 @@ export default function SchoolDashboard() {
       setLoading(false);
     }
   };
+const submitActivity =
+  async () => {
+    try {
+      if (!schoolData) return;
 
+      if (!attendance) {
+        alert(
+          "Enter attendance"
+        );
+        return;
+      }
+
+      if (
+        !currentTraining
+      ) {
+        alert(
+          "No training found"
+        );
+        return;
+      }
+
+      const docId = `${schoolData.schoolId}_${currentTraining.id}`;
+
+      await setDoc(
+        doc(
+          db,
+          "emcccActivities",
+          docId
+        ),
+        {
+          schoolId:
+            schoolData.schoolId,
+
+          weekId:
+            currentTraining.id,
+
+          weekNumber:
+            currentTraining.week,
+
+          title:
+            currentTraining.title,
+
+          status:
+            "pending",
+
+          attendance:
+            Number(
+              attendance
+            ),
+
+          completedTasks:
+            currentTraining.tasks ||
+            [],
+
+          evidenceUrl,
+
+          submittedBy:
+            "school_admin",
+
+          submittedAt:
+            new Date(),
+
+          approvedAt:
+            null,
+        }
+      );
+
+      alert(
+        "Activity submitted successfully"
+      );
+
+      setAttendance("");
+      setEvidenceUrl("");
+
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    }
+  };
   if (loading) {
     return (
       <div style={{ padding: "30px" }}>
@@ -210,9 +353,138 @@ export default function SchoolDashboard() {
 
       </div>
 
+{emcccData && (
+  <div style={styles.section}>
+    <h2>EMCCC Status</h2>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns:
+          "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: "15px",
+      }}
+    >
+      <div style={styles.card}>
+        <h4>Status</h4>
+        <h2>
+          {emcccData.status}
+        </h2>
+      </div>
+
+      <div style={styles.card}>
+        <h4>Current Week</h4>
+        <h2>
+          {
+            emcccData.nextTrainingWeek
+          }
+          /10
+        </h2>
+      </div>
+
+      <div style={styles.card}>
+        <h4>Members</h4>
+        <h2>
+          {
+            emcccData.membersCount
+          }
+        </h2>
+      </div>
+
+      <div style={styles.card}>
+        <h4>Launch Status</h4>
+        <h2>
+          {emcccData.launchDate
+            ? "Completed"
+            : "Pending"}
+        </h2>
+      </div>
+    </div>
+  </div>
+)}
+{currentTraining && (
+  <div style={styles.section}>
+    <h2>
+      Week {
+        currentTraining.week
+      } Training
+    </h2>
+
+    <h3>
+      {
+        currentTraining.title
+      }
+    </h3>
+
+    <p>
+      Theme:{" "}
+      {
+        currentTraining.theme
+      }
+    </p>
+
+    <h4>Tasks</h4>
+
+    <ul>
+      {currentTraining.tasks?.map(
+        (
+          task,
+          index
+        ) => (
+          <li key={index}>
+            {typeof task ===
+            "string"
+              ? task
+              : task.title}
+          </li>
+        )
+      )}
+    </ul>
+  </div>
+)}
       <div style={styles.section}>
 
         <h2>
+ {currentTraining && (
+  <div style={styles.section}>
+    <h2>
+      Submit EMCCC Activity
+    </h2>
+
+    <input
+      type="number"
+      placeholder="Attendance"
+      value={attendance}
+      onChange={(e) =>
+        setAttendance(
+          e.target.value
+        )
+      }
+      style={styles.input}
+    />
+
+    <input
+      type="text"
+      placeholder="Evidence URL / Photo Link"
+      value={evidenceUrl}
+      onChange={(e) =>
+        setEvidenceUrl(
+          e.target.value
+        )
+      }
+      style={styles.input}
+    />
+
+    <button
+      style={styles.button}
+      onClick={
+        submitActivity
+      }
+    >
+      Submit Activity
+    </button>
+  </div>
+)}         
           Recent Collections
         </h2>
 
@@ -289,4 +561,20 @@ const styles = {
     borderBottom:
       "1px solid #ddd",
   },
+  button: {
+  padding: "12px 18px",
+  background: "#16a34a",
+  color: "#fff",
+  border: "none",
+  borderRadius: "8px",
+  cursor: "pointer",
+},
+
+input: {
+  width: "100%",
+  padding: "12px",
+  marginBottom: "15px",
+  border: "1px solid #ccc",
+  borderRadius: "8px",
+},
 };

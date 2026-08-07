@@ -7,22 +7,38 @@ import {
   collection,
   addDoc,
   getDocs,
+  doc,
+  getDoc,
+  query,
+  where,
   serverTimestamp,
 } from "firebase/firestore";
 
-import { db } from "../firebase";
+import {
+  db,
+  auth,
+} from "../firebase";
+import {
+  processCollectionPurchase,
+} from "../services/walletService";
 
 export default function RepresentativeDashboard() {
-  // =========================
-  // STATES
-  // =========================
   const [schools, setSchools] =
     useState([]);
 
-  const [collections, setCollections] =
+  const [collectionHistory,
+    setCollectionHistory] =
     useState([]);
 
-  const [selectedSchool, setSelectedSchool] =
+  const [prices, setPrices] =
+    useState({
+      plastic: 0,
+      paper: 0,
+      metal: 0,
+    });
+
+  const [selectedSchool,
+    setSelectedSchool] =
     useState("");
 
   const [plastic, setPlastic] =
@@ -34,36 +50,64 @@ export default function RepresentativeDashboard() {
   const [metal, setMetal] =
     useState("");
 
+  const [loading, setLoading] =
+    useState(false);
+
   // =========================
-  // LOAD DATA
+  // LOAD ALL DATA
   // =========================
   useEffect(() => {
     fetchSchools();
+    fetchPrices();
     fetchCollections();
   }, []);
 
   // =========================
-  // FETCH SCHOOLS
+  // FETCH APPROVED SCHOOLS
   // =========================
   const fetchSchools = async () => {
     try {
-      const snapshot = await getDocs(
-        collection(db, "schools")
+      const schoolQuery = query(
+        collection(db, "schools"),
+        where("approved", "==", true)
       );
 
-      const schoolsList =
+      const snapshot =
+        await getDocs(schoolQuery);
+
+      const schoolList =
         snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
 
-      setSchools(schoolsList);
+      setSchools(schoolList);
 
     } catch (error) {
-      console.error(
-        "Error fetching schools:",
-        error
+      console.error(error);
+    }
+  };
+
+  // =========================
+  // FETCH CURRENT PRICES
+  // =========================
+  const fetchPrices = async () => {
+    try {
+      const priceRef = doc(
+        db,
+        "prices",
+        "current"
       );
+
+      const priceSnap =
+        await getDoc(priceRef);
+
+      if (priceSnap.exists()) {
+        setPrices(priceSnap.data());
+      }
+
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -72,126 +116,198 @@ export default function RepresentativeDashboard() {
   // =========================
   const fetchCollections = async () => {
     try {
-      const snapshot = await getDocs(
-        collection(db, "recyclingLogs")
-      );
+      const snapshot =
+        await getDocs(
+          collection(db, "collections")
+        );
 
-      const logs = snapshot.docs.map(
-        (doc) => ({
+      const list =
+        snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
-        })
-      );
+        }));
 
-      setCollections(logs);
+      setCollectionHistory(list);
 
     } catch (error) {
-      console.error(
-        "Error fetching collections:",
-        error
-      );
+      console.error(error);
     }
   };
+
+  // =========================
+  // LIVE CALCULATIONS
+  // =========================
+  const plasticKg =
+    Number(plastic || 0);
+
+  const paperKg =
+    Number(paper || 0);
+
+  const metalKg =
+    Number(metal || 0);
+
+  const plasticValue =
+    plasticKg * prices.plastic;
+
+  const paperValue =
+    paperKg * prices.paper;
+
+  const metalValue =
+    metalKg * prices.metal;
+
+  const totalWeight =
+    plasticKg +
+    paperKg +
+    metalKg;
+
+  const totalValue =
+    plasticValue +
+    paperValue +
+    metalValue;
+
+  const repLevy =
+    totalValue * 0.05;
+
+ const schoolLevy =
+  totalValue * 0.05;
+
+  const schoolCredit =
+    totalValue - schoolLevy;
 
   // =========================
   // SUBMIT COLLECTION
   // =========================
-  const handleSubmit = async () => {
-    try {
-      if (!selectedSchool) {
-        alert("Please select a school");
-        return;
-      }
+ const handleSubmit = async () => {
+  if (!selectedSchool) {
+    alert("Select school");
+    return;
+  }
 
-      const totalWeight =
-        Number(plastic || 0) +
-        Number(paper || 0) +
-        Number(metal || 0);
+  if (totalWeight <= 0) {
+    alert("Enter waste quantity");
+    return;
+  }
 
-      const totalValue =
-        totalWeight * 250;
+  setLoading(true);
 
-      await addDoc(
-        collection(db, "recyclingLogs"),
-        {
-          schoolId: selectedSchool,
+  try {
+    // =========================
+    // GET LOGGED-IN REP
+    // =========================
+    const repId =
+      auth.currentUser?.uid;
 
-          plastic: Number(plastic),
-
-          paper: Number(paper),
-
-          metal: Number(metal),
-
-          totalWeight,
-
-          totalValue,
-
-          createdAt:
-            serverTimestamp(),
-        }
-      );
-
-      alert(
-        "Collection uploaded successfully"
-      );
-
-      // REFRESH HISTORY
-      fetchCollections();
-
-      // RESET FORM
-      setSelectedSchool("");
-      setPlastic("");
-      setPaper("");
-      setMetal("");
-
-    } catch (error) {
-      console.error(
-        "Upload Error:",
-        error
-      );
-
-      alert(
-        "Failed to upload collection"
+    if (!repId) {
+      throw new Error(
+        "Representative not authenticated"
       );
     }
-  };
 
-  // =========================
-  // UI
-  // =========================
+    // =========================
+    // SAVE COLLECTION RECORD
+    // =========================
+    await addDoc(
+      collection(db, "collections"),
+      {
+        repId,
+        schoolId:
+          selectedSchool,
+
+        plasticKg,
+        paperKg,
+        metalKg,
+
+        plasticPrice:
+          prices.plastic,
+
+        paperPrice:
+          prices.paper,
+
+        metalPrice:
+          prices.metal,
+
+        totalWeight,
+        totalValue,
+
+        repLevy,
+        schoolLevy,
+        schoolCredit,
+
+        status: "completed",
+
+        createdAt:
+          serverTimestamp(),
+      }
+    );
+
+    // =========================
+    // PROCESS WALLET MOVEMENT
+    // =========================
+    await processCollectionPurchase({
+      repId,
+      schoolId:
+        selectedSchool,
+      totalValue,
+    });
+
+    alert(
+      "Collection submitted successfully"
+    );
+
+    // =========================
+    // RESET FORM
+    // =========================
+    setSelectedSchool("");
+    setPlastic("");
+    setPaper("");
+    setMetal("");
+
+    fetchCollections();
+
+  } catch (error) {
+    console.error(error);
+
+    alert(
+      error.message ||
+        "Upload failed"
+    );
+  }
+
+  setLoading(false);
+};
+
   return (
-    <div
-      style={{
-        padding: "20px",
-        background: "#f5f7fa",
-        minHeight: "100vh",
-      }}
-    >
+    <div style={styles.page}>
       <h1>
         Representative Dashboard
       </h1>
 
       <p>
-        Record waste collections
-        from schools.
+        Record school waste collections
       </p>
 
-      {/* ====================== */}
-      {/* COLLECTION FORM */}
-      {/* ====================== */}
+      {/* PRICE CARD */}
+      <div style={styles.card}>
+        <h3>Current Prices</h3>
 
-      <div
-        style={{
-          background: "#fff",
-          padding: "20px",
-          borderRadius: "10px",
-          maxWidth: "500px",
-          marginTop: "20px",
-          boxShadow:
-            "0 2px 8px rgba(0,0,0,0.1)",
-        }}
-      >
-        {/* SCHOOL SELECT */}
+        <p>
+          Plastic:
+          ₦{prices.plastic}/kg
+        </p>
+
+        <p>
+          Paper:
+          ₦{prices.paper}/kg
+        </p>
+
+        <p>
+          Metal:
+          ₦{prices.metal}/kg
+        </p>
+      </div>
+
+      {/* FORM */}
+      <div style={styles.card}>
         <select
           value={selectedSchool}
           onChange={(e) =>
@@ -215,7 +331,6 @@ export default function RepresentativeDashboard() {
           ))}
         </select>
 
-        {/* PLASTIC */}
         <input
           type="number"
           placeholder="Plastic (kg)"
@@ -226,7 +341,6 @@ export default function RepresentativeDashboard() {
           style={styles.input}
         />
 
-        {/* PAPER */}
         <input
           type="number"
           placeholder="Paper (kg)"
@@ -237,7 +351,6 @@ export default function RepresentativeDashboard() {
           style={styles.input}
         />
 
-        {/* METAL */}
         <input
           type="number"
           placeholder="Metal (kg)"
@@ -248,94 +361,88 @@ export default function RepresentativeDashboard() {
           style={styles.input}
         />
 
-        {/* BUTTON */}
+        {/* CALCULATION PREVIEW */}
+        <div style={styles.preview}>
+          <h3>Calculation Preview</h3>
+
+          <p>
+            Total Weight:
+            {totalWeight} kg
+          </p>
+
+          <p>
+            Total Value:
+            ₦
+            {totalValue.toLocaleString()}
+          </p>
+
+          <p>
+            School Credit:
+            ₦
+            {schoolCredit.toLocaleString()}
+          </p>
+
+          <p>
+            Platform Revenue:
+            ₦
+            {(
+              repLevy +
+              schoolLevy
+            ).toLocaleString()}
+          </p>
+        </div>
+
         <button
           onClick={handleSubmit}
+          disabled={loading}
           style={styles.button}
         >
-          Submit Collection
+          {loading
+            ? "Submitting..."
+            : "Submit Collection"}
         </button>
       </div>
 
-      {/* ====================== */}
-      {/* COLLECTION HISTORY */}
-      {/* ====================== */}
+      {/* HISTORY */}
+      <div style={styles.card}>
+        <h2>Collection History</h2>
 
-      <div
-        style={{
-          background: "#fff",
-          padding: "20px",
-          borderRadius: "10px",
-          marginTop: "30px",
-          boxShadow:
-            "0 2px 8px rgba(0,0,0,0.1)",
-        }}
-      >
-        <h2>
-          Collection History
-        </h2>
-
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            marginTop: "20px",
-          }}
-        >
+        <table style={styles.table}>
           <thead>
-            <tr
-              style={{
-                background: "#007bff",
-                color: "#fff",
-              }}
-            >
+            <tr>
               <th style={styles.th}>
                 School
               </th>
 
               <th style={styles.th}>
-                Plastic
+                Weight
               </th>
 
               <th style={styles.th}>
-                Paper
-              </th>
-
-              <th style={styles.th}>
-                Metal
-              </th>
-
-              <th style={styles.th}>
-                Total Value
+                Value
               </th>
             </tr>
           </thead>
 
           <tbody>
-            {collections.map((item) => (
-              <tr key={item.id}>
-                <td style={styles.td}>
-                  {item.schoolId}
-                </td>
+            {collectionHistory.map(
+              (item) => (
+                <tr key={item.id}>
+                  <td style={styles.td}>
+                    {item.schoolId}
+                  </td>
 
-                <td style={styles.td}>
-                  {item.plastic} kg
-                </td>
+                  <td style={styles.td}>
+                    {item.totalWeight}kg
+                  </td>
 
-                <td style={styles.td}>
-                  {item.paper} kg
-                </td>
-
-                <td style={styles.td}>
-                  {item.metal} kg
-                </td>
-
-                <td style={styles.td}>
-                  ₦
-                  {item.totalValue?.toLocaleString()}
-                </td>
-              </tr>
-            ))}
+                  <td style={styles.td}>
+                    ₦
+                    {item.totalValue?.toLocaleString()}
+                  </td>
+                </tr>
+              )
+            )}
           </tbody>
         </table>
       </div>
@@ -343,32 +450,57 @@ export default function RepresentativeDashboard() {
   );
 }
 
-// =========================
-// STYLES
-// =========================
 const styles = {
+  page: {
+    padding: "20px",
+    background: "#f5f7fa",
+    minHeight: "100vh",
+  },
+
+  card: {
+    background: "#fff",
+    padding: "20px",
+    borderRadius: "12px",
+    marginTop: "20px",
+    boxShadow:
+      "0 2px 10px rgba(0,0,0,0.08)",
+  },
+
   input: {
     width: "100%",
     padding: "12px",
     marginBottom: "15px",
-    borderRadius: "6px",
+    borderRadius: "8px",
     border: "1px solid #ccc",
-    fontSize: "16px",
     boxSizing: "border-box",
+  },
+
+  preview: {
+    background: "#eef6ff",
+    padding: "15px",
+    borderRadius: "10px",
+    marginBottom: "15px",
   },
 
   button: {
     width: "100%",
-    padding: "12px",
-    backgroundColor: "#007bff",
-    color: "#fff",
+    padding: "14px",
     border: "none",
-    borderRadius: "6px",
+    background: "#16a34a",
+    color: "#fff",
+    borderRadius: "8px",
     fontSize: "16px",
     cursor: "pointer",
   },
 
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+  },
+
   th: {
+    background: "#2563eb",
+    color: "#fff",
     padding: "12px",
     textAlign: "left",
   },

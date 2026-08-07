@@ -69,7 +69,50 @@ if (
 
   return;
 }
+// =====================
+// MONITOR
+// =====================
+const monitorQuery = query(
+  collection(
+    db,
+    "monitors"
+  ),
+  where(
+    "email",
+    "==",
+    email
+  )
+);
 
+const monitorSnapshot =
+  await getDocs(
+    monitorQuery
+  );
+
+if (!monitorSnapshot.empty) {
+  const monitorData =
+    monitorSnapshot.docs[0].data();
+
+  if (
+    !monitorData.approved
+  ) {
+    alert(
+      "Monitor not approved yet"
+    );
+
+    setLoading(false);
+
+    return;
+  }
+
+  navigate(
+    "/monitoring-dashboard"
+  );
+
+  setLoading(false);
+
+  return;
+}
       // =====================
       // REPRESENTATIVE
       // =====================
@@ -226,6 +269,17 @@ if (
             Register Here
           </Link>
         </p>
+
+        <p style={styles.text}>
+  Monitor?{" "}
+
+  <Link
+    to="/monitor-registration"
+    style={styles.link}
+  >
+    Register Here
+  </Link>
+</p>
 
       </div>
 

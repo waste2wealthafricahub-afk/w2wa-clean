@@ -6,18 +6,16 @@ import {
   increment,
   addDoc,
   collection,
+  serverTimestamp,
 } from "firebase/firestore";
 
-import {
-  db,
-} from "../firebase";
+import { db } from "../firebase";
 
 // =============================
 // CREATE SCHOOL WALLET
 // =============================
 export const createSchoolWallet =
   async (schoolId) => {
-
     const walletRef = doc(
       db,
       "schoolWallets",
@@ -28,26 +26,22 @@ export const createSchoolWallet =
       await getDoc(walletRef);
 
     if (!walletSnap.exists()) {
-
-      await setDoc(
-        walletRef,
-        {
-          schoolId,
-          balance: 0,
-          totalEarned: 0,
-          totalDeductions: 0,
-          createdAt: new Date(),
-        }
-      );
+      await setDoc(walletRef, {
+        schoolId,
+        balance: 0,
+        totalEarned: 0,
+        totalDeductions: 0,
+        createdAt:
+          serverTimestamp(),
+      });
     }
   };
 
 // =============================
-// CREATE REP FLOAT WALLET
+// CREATE REPRESENTATIVE WALLET
 // =============================
 export const createRepWallet =
   async (repId) => {
-
     const walletRef = doc(
       db,
       "repWallets",
@@ -58,17 +52,14 @@ export const createRepWallet =
       await getDoc(walletRef);
 
     if (!walletSnap.exists()) {
-
-      await setDoc(
-        walletRef,
-        {
-          repId,
-          floatBalance: 0,
-          totalPurchases: 0,
-          totalLeviesPaid: 0,
-          createdAt: new Date(),
-        }
-      );
+      await setDoc(walletRef, {
+        repId,
+        floatBalance: 0,
+        totalPurchases: 0,
+        totalLeviesPaid: 0,
+        createdAt:
+          serverTimestamp(),
+      });
     }
   };
 
@@ -77,7 +68,6 @@ export const createRepWallet =
 // =============================
 export const createPlatformWallet =
   async () => {
-
     const walletRef = doc(
       db,
       "platformWallet",
@@ -88,21 +78,18 @@ export const createPlatformWallet =
       await getDoc(walletRef);
 
     if (!walletSnap.exists()) {
-
-      await setDoc(
-        walletRef,
-        {
-          totalRevenue: 0,
-          schoolLevies: 0,
-          representativeLevies: 0,
-          createdAt: new Date(),
-        }
-      );
+      await setDoc(walletRef, {
+        totalRevenue: 0,
+        schoolLevies: 0,
+        representativeLevies: 0,
+        createdAt:
+          serverTimestamp(),
+      });
     }
   };
 
 // =============================
-// FUND REPRESENTATIVE FLOAT
+// FUND REP FLOAT WALLET
 // =============================
 export const fundRepWallet =
   async (
@@ -110,23 +97,18 @@ export const fundRepWallet =
     amount,
     adminEmail
   ) => {
-
     const walletRef = doc(
       db,
       "repWallets",
       repId
     );
 
-    await updateDoc(
-      walletRef,
-      {
-        floatBalance:
-          increment(amount),
-
-        lastTopUp:
-          new Date(),
-      }
-    );
+    await updateDoc(walletRef, {
+      floatBalance:
+        increment(amount),
+      lastTopUp:
+        serverTimestamp(),
+    });
 
     await addDoc(
       collection(
@@ -134,12 +116,15 @@ export const fundRepWallet =
         "transactions"
       ),
       {
+        type: "float_topup",
         walletType: "rep",
         repId,
         amount,
-        type: "float_topup",
-        approvedBy: adminEmail,
-        createdAt: new Date(),
+        approvedBy:
+          adminEmail,
+        status: "completed",
+        createdAt:
+          serverTimestamp(),
       }
     );
   };
@@ -153,13 +138,13 @@ export const processCollectionPurchase =
     schoolId,
     totalValue,
   }) => {
-
+    // =========================
+    // LEVY CALCULATIONS
+    // =========================
     const repLevy =
       totalValue * 0.05;
 
-    const schoolLevy =
-      totalValue * 0.025;
-
+   const schoolLevy = totalValue * 0.05;
     const repDebit =
       totalValue + repLevy;
 
@@ -170,7 +155,7 @@ export const processCollectionPurchase =
       repLevy + schoolLevy;
 
     // =========================
-    // CHECK REP FLOAT BALANCE
+    // CHECK REP FLOAT
     // =========================
     const repWalletRef = doc(
       db,
@@ -229,33 +214,44 @@ export const processCollectionPurchase =
       schoolWalletRef,
       {
         balance:
-          increment(schoolCredit),
+          increment(
+            schoolCredit
+          ),
 
         totalEarned:
-          increment(schoolCredit),
+          increment(
+            schoolCredit
+          ),
 
         totalDeductions:
-          increment(schoolLevy),
+          increment(
+            schoolLevy
+          ),
       }
     );
 
     // =========================
     // CREDIT PLATFORM WALLET
     // =========================
-    const platformWalletRef = doc(
-      db,
-      "platformWallet",
-      "main"
-    );
+    const platformWalletRef =
+      doc(
+        db,
+        "platformWallet",
+        "main"
+      );
 
     await updateDoc(
       platformWalletRef,
       {
         totalRevenue:
-          increment(platformRevenue),
+          increment(
+            platformRevenue
+          ),
 
         schoolLevies:
-          increment(schoolLevy),
+          increment(
+            schoolLevy
+          ),
 
         representativeLevies:
           increment(repLevy),
@@ -271,10 +267,15 @@ export const processCollectionPurchase =
         "transactions"
       ),
       {
-        type: "school_payment",
+        type:
+          "school_payment",
         schoolId,
-        amount: schoolCredit,
-        createdAt: new Date(),
+        amount:
+          schoolCredit,
+        status:
+          "completed",
+        createdAt:
+          serverTimestamp(),
       }
     );
 
@@ -284,10 +285,13 @@ export const processCollectionPurchase =
         "transactions"
       ),
       {
-        type: "waste_purchase",
+        type: "rep_debit",
         repId,
         amount: repDebit,
-        createdAt: new Date(),
+        status:
+          "completed",
+        createdAt:
+          serverTimestamp(),
       }
     );
 
@@ -297,9 +301,14 @@ export const processCollectionPurchase =
         "transactions"
       ),
       {
-        type: "maintenance_fee",
-        amount: platformRevenue,
-        createdAt: new Date(),
+        type:
+          "platform_revenue",
+        amount:
+          platformRevenue,
+        status:
+          "completed",
+        createdAt:
+          serverTimestamp(),
       }
     );
 
@@ -309,65 +318,3 @@ export const processCollectionPurchase =
       platformRevenue,
     };
   };
-```javascript
-import {
-  doc,
-  setDoc,
-  updateDoc,
-  increment,
-  addDoc,
-  collection,
-} from "firebase/firestore";
-
-import {
-  db,
-} from "../firebase";
-
-// =========================
-// CREATE WALLET
-// =========================
-export const createWallet = async (
-  uid,
-  role
-) => {
-
-  await setDoc(
-    doc(db, "wallets", uid),
-    {
-      uid,
-      role,
-      balance: 0,
-      totalEarned: 0,
-      createdAt: new Date(),
-    }
-  );
-};
-
-// =========================
-// CREDIT WALLET
-// =========================
-export const creditWallet = async (
-  uid,
-  amount,
-  description
-) => {
-
-  await updateDoc(
-    doc(db, "wallets", uid),
-    {
-      balance: increment(amount),
-      totalEarned: increment(amount),
-    }
-  );
-
-  await addDoc(
-    collection(db, "transactions"),
-    {
-      uid,
-      amount,
-      type: "credit",
-      description,
-      createdAt: new Date(),
-    }
-  );
-};

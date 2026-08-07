@@ -16,6 +16,8 @@ export default function RepresentativeRegistration() {
     phone: "",
     address: "",
     state: "",
+    localGovernment: "",
+
   });
 
   const handleChange = (e) => {
@@ -52,7 +54,8 @@ export default function RepresentativeRegistration() {
           phone: formData.phone.trim(),
           address: formData.address.trim(),
           state: formData.state.trim(),
-
+          localGovernment:
+          formData.localGovernment,
           clubCode: "EMCCC",
 
           role: "representative",
@@ -180,6 +183,15 @@ export default function RepresentativeRegistration() {
             onChange={handleChange}
             required
             disabled={loading}
+            style={styles.input}
+          />
+
+          <input
+            type="text"
+            name="localGovernment"
+            placeholder="Local Government Area"
+            required
+            onChange={handleChange}
             style={styles.input}
           />
 
