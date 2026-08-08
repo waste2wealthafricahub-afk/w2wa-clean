@@ -1,19 +1,33 @@
 import React, {
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
 import {
   collection,
   getDocs,
+  updateDoc,
+  doc,
 } from "firebase/firestore";
 
 import { db } from "../firebase";
+
+import UserSummaryCards from "../components/userManagement/UserSummaryCards";
+import UserSearch from "../components/userManagement/UserSearch";
+import UserTabs from "../components/userManagement/UserTabs";
+import UserTable from "../components/userManagement/UserTable";
 
 export default function UserManagement() {
 
   const [activeTab, setActiveTab] =
     useState("schools");
+
+  const [search, setSearch] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(true);
 
   const [schools, setSchools] =
     useState([]);
@@ -26,20 +40,18 @@ export default function UserManagement() {
   const [monitors, setMonitors] =
     useState([]);
 
-  const [loading, setLoading] =
-    useState(true);
-
   useEffect(() => {
+
     fetchUsers();
+
   }, []);
 
-  const fetchUsers = async () => {
+  async function fetchUsers() {
 
     try {
 
       setLoading(true);
 
-      // Schools
       const schoolSnap =
         await getDocs(
           collection(
@@ -49,15 +61,20 @@ export default function UserManagement() {
         );
 
       setSchools(
+
         schoolSnap.docs.map(
-          (doc) => ({
-            id: doc.id,
-            ...doc.data(),
+          (docItem) => ({
+
+            id: docItem.id,
+
+            ...docItem.data(),
+
           })
+
         )
+
       );
 
-      // Representatives
       const repSnap =
         await getDocs(
           collection(
@@ -67,15 +84,20 @@ export default function UserManagement() {
         );
 
       setRepresentatives(
+
         repSnap.docs.map(
-          (doc) => ({
-            id: doc.id,
-            ...doc.data(),
+          (docItem) => ({
+
+            id: docItem.id,
+
+            ...docItem.data(),
+
           })
+
         )
+
       );
 
-      // Monitors
       const monitorSnap =
         await getDocs(
           collection(
@@ -85,259 +107,475 @@ export default function UserManagement() {
         );
 
       setMonitors(
-        monitorSnap.docs.map(
-          (doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          })
-        )
-      );
 
-      setLoading(false);
+        monitorSnap.docs.map(
+          (docItem) => ({
+
+            id: docItem.id,
+
+            ...docItem.data(),
+
+          })
+
+        )
+
+      );
 
     } catch (error) {
 
       console.error(error);
 
+      alert(
+        "Unable to load users."
+      );
+
+    } finally {
+
       setLoading(false);
 
     }
 
-  };
+  }
+
+  async function approveUser(
+    collectionName,
+    id
+  ) {
+
+    try {
+
+      await updateDoc(
+
+        doc(
+          db,
+          collectionName,
+          id
+        ),
+
+        {
+
+          approved: true,
+
+        }
+
+      );
+
+      await fetchUsers();
+
+      alert(
+        "User approved successfully."
+      );
+
+    } catch (error) {
+
+      console.error(error);
+
+      alert(
+        "Approval failed."
+      );
+
+    }
+
+  }
+
+  async function suspendUser(
+    collectionName,
+    id
+  ) {
+
+    try {
+
+      await updateDoc(
+
+        doc(
+          db,
+          collectionName,
+          id
+        ),
+
+        {
+
+          approved: false,
+
+        }
+
+      );
+
+      await fetchUsers();
+
+      alert(
+        "User suspended."
+      );
+
+    } catch (error) {
+
+      console.error(error);
+
+      alert(
+        "Unable to suspend user."
+      );
+
+    }
+
+  }
+    const filteredSchools =
+    useMemo(() => {
+
+      return schools.filter(
+        (school) => {
+
+          const text =
+            search.toLowerCase();
+
+          return (
+
+            school.schoolName
+              ?.toLowerCase()
+              .includes(text) ||
+
+            school.email
+              ?.toLowerCase()
+              .includes(text)
+
+          );
+
+        }
+
+      );
+
+    }, [
+      schools,
+      search,
+    ]);
+
+  const filteredRepresentatives =
+    useMemo(() => {
+
+      return representatives.filter(
+        (rep) => {
+
+          const text =
+            search.toLowerCase();
+
+          return (
+
+            rep.fullName
+              ?.toLowerCase()
+              .includes(text) ||
+
+            rep.email
+              ?.toLowerCase()
+              .includes(text)
+
+          );
+
+        }
+
+      );
+
+    }, [
+      representatives,
+      search,
+    ]);
+
+  const filteredMonitors =
+    useMemo(() => {
+
+      return monitors.filter(
+        (monitor) => {
+
+          const text =
+            search.toLowerCase();
+
+          return (
+
+            monitor.fullName
+              ?.toLowerCase()
+              .includes(text) ||
+
+            monitor.email
+              ?.toLowerCase()
+              .includes(text)
+
+          );
+
+        }
+
+      );
+
+    }, [
+      monitors,
+      search,
+    ]);
+
+  function handleView(user) {
+
+    alert(
+
+      JSON.stringify(
+        user,
+        null,
+        2
+      )
+
+    );
+
+  }
+
+  function handleApprove(user) {
+
+    let collectionName =
+      "schools";
+
+    if (
+      activeTab ===
+      "representatives"
+    ) {
+
+      collectionName =
+        "representatives";
+
+    }
+
+    if (
+      activeTab ===
+      "monitors"
+    ) {
+
+      collectionName =
+        "monitors";
+
+    }
+
+    approveUser(
+      collectionName,
+      user.id
+    );
+
+  }
+
+  function handleSuspend(user) {
+
+    let collectionName =
+      "schools";
+
+    if (
+      activeTab ===
+      "representatives"
+    ) {
+
+      collectionName =
+        "representatives";
+
+    }
+
+    if (
+      activeTab ===
+      "monitors"
+    ) {
+
+      collectionName =
+        "monitors";
+
+    }
+
+    suspendUser(
+      collectionName,
+      user.id
+    );
+
+  }
 
   if (loading) {
 
     return (
-      <div style={{padding:"30px"}}>
+
+      <div
+        style={{
+          padding: "40px",
+          fontSize: "20px",
+        }}
+      >
+
         Loading User Management...
+
       </div>
+
     );
 
   }
 
   return (
 
-  <div style={styles.page}>
+    <div
+      style={styles.page}
+    >
 
-    <h1>User Management</h1>
+      <h1>
+        User Management
+      </h1>
 
-    <p>
-      Manage Schools,
-      Representatives and
-      Ministry Monitors
-    </p>
-
-    <div style={styles.tabs}>
-
-      <button
-        style={
-          activeTab==="schools"
-          ? styles.activeButton
-          : styles.button
-        }
-        onClick={()=>
-          setActiveTab("schools")
-        }
-      >
-        Schools
-      </button>
-
-      <button
-        style={
-          activeTab==="representatives"
-          ? styles.activeButton
-          : styles.button
-        }
-        onClick={()=>
-          setActiveTab("representatives")
-        }
-      >
+      <p>
+        Manage Schools,
         Representatives
-      </button>
-
-      <button
-        style={
-          activeTab==="monitors"
-          ? styles.activeButton
-          : styles.button
-        }
-        onClick={()=>
-          setActiveTab("monitors")
-        }
-      >
+        and Ministry
         Monitors
-      </button>
+      </p>
+
+      <UserSummaryCards
+
+        schools={schools}
+
+        representatives={
+          representatives
+        }
+
+        monitors={monitors}
+
+      />
+
+      <UserSearch
+
+        search={search}
+
+        setSearch={setSearch}
+
+      />
+
+      <UserTabs
+
+        activeTab={
+          activeTab
+        }
+
+        setActiveTab={
+          setActiveTab
+        }
+
+      />
+            {activeTab ===
+        "schools" && (
+
+        <UserTable
+
+          users={
+            filteredSchools
+          }
+
+          type="school"
+
+          onView={
+            handleView
+          }
+
+          onApprove={
+            handleApprove
+          }
+
+          onSuspend={
+            handleSuspend
+          }
+
+        />
+
+      )}
+
+      {activeTab ===
+        "representatives" && (
+
+        <UserTable
+
+          users={
+            filteredRepresentatives
+          }
+
+          type="representative"
+
+          onView={
+            handleView
+          }
+
+          onApprove={
+            handleApprove
+          }
+
+          onSuspend={
+            handleSuspend
+          }
+
+        />
+
+      )}
+
+      {activeTab ===
+        "monitors" && (
+
+        <UserTable
+
+          users={
+            filteredMonitors
+          }
+
+          type="monitor"
+
+          onView={
+            handleView
+          }
+
+          onApprove={
+            handleApprove
+          }
+
+          onSuspend={
+            handleSuspend
+          }
+
+        />
+
+      )}
 
     </div>
 
-    <table style={styles.table}>
-
-      <thead>
-
-        <tr>
-
-          <th style={styles.th}>Name</th>
-
-          <th style={styles.th}>Email</th>
-
-          <th style={styles.th}>Status</th>
-
-          <th style={styles.th}>Action</th>
-
-        </tr>
-
-      </thead>
-
-      <tbody>
-
-        {activeTab==="schools" &&
-
-          schools.map((school)=>(
-
-            <tr key={school.id}>
-
-              <td style={styles.td}>
-                {school.schoolName}
-              </td>
-
-              <td style={styles.td}>
-                {school.email}
-              </td>
-
-              <td style={styles.td}>
-                {school.approved
-                  ? "Approved"
-                  : "Pending"}
-              </td>
-
-              <td style={styles.td}>
-
-                <button
-                  style={styles.actionButton}
-                >
-                  View
-                </button>
-
-              </td>
-
-            </tr>
-
-          ))
-
-        }
-
-        {activeTab==="representatives" &&
-
-          representatives.map((rep)=>(
-
-            <tr key={rep.id}>
-
-              <td style={styles.td}>
-                {rep.fullName}
-              </td>
-
-              <td style={styles.td}>
-                {rep.email}
-              </td>
-
-              <td style={styles.td}>
-                {rep.approved
-                  ? "Approved"
-                  : "Pending"}
-              </td>
-
-              <td style={styles.td}>
-
-                <button
-                  style={styles.actionButton}
-                >
-                  View
-                </button>
-
-              </td>
-
-            </tr>
-
-          ))
-
-        }
-
-        {activeTab==="monitors" &&
-
-          monitors.map((monitor)=>(
-
-            <tr key={monitor.id}>
-
-              <td style={styles.td}>
-                {monitor.fullName}
-              </td>
-
-              <td style={styles.td}>
-                {monitor.email}
-              </td>
-
-              <td style={styles.td}>
-                {monitor.approved
-                  ? "Approved"
-                  : "Pending"}
-              </td>
-
-              <td style={styles.td}>
-
-                <button
-                  style={styles.actionButton}
-                >
-                  View
-                </button>
-
-              </td>
-
-            </tr>
-
-          ))
-
-        }
-
-      </tbody>
-
-    </table>
-
-  </div>
-
-);
+  );
 
 }
 
 const styles = {
 
   page:{
-    padding:"20px",
-    background:"#f5f7fa",
+
+    padding:"25px",
+
+    background:"#f4f6f9",
+
     minHeight:"100vh",
+
+  },
+    title:{
+
+    marginBottom:"5px",
+
   },
 
-  tabs:{
-    display:"flex",
-    gap:"10px",
-    marginTop:"25px",
+  subtitle:{
+
+    color:"#666",
+
     marginBottom:"25px",
+
   },
 
-  button:{
-    padding:"10px 20px",
-    background:"#ddd",
-    border:"none",
-    borderRadius:"8px",
-    cursor:"pointer",
-  },
+  section:{
 
-  activeButton:{
-    padding:"10px 20px",
-    background:"#2563eb",
-    color:"#fff",
-    border:"none",
-    borderRadius:"8px",
-    cursor:"pointer",
+    background:"#fff",
+
+    padding:"20px",
+
+    borderRadius:"12px",
+
+    boxShadow:
+      "0 2px 8px rgba(0,0,0,.08)",
+
   },
 
 };
