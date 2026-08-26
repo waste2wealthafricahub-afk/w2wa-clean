@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+
 import React, {
   useEffect,
   useState,
@@ -21,6 +23,7 @@ import {
 } from "../firebase";
 
 export default function SchoolDashboard() {
+  const navigate = useNavigate();
 
   const [schoolData,
     setSchoolData] =
@@ -93,61 +96,78 @@ const [evidenceUrl,
         return;
       }
 
-      const school =
-        schoolSnapshot.docs[0].data();
+      const schoolDoc = schoolSnapshot.docs[0];
+
+      const school = {
+        id: schoolDoc.id,
+        ...schoolDoc.data()
+      };
 
       setSchoolData(school);
 
+      // Use the school's own Firestore ID.
+      // Fall back to the stored schoolId field where available.
       const schoolId =
-        school.schoolId;
-        const emcccSnap =
-  await getDoc(
-    doc(
-      db,
-      "emcccSchools",
-      schoolId
-    )
-  );
+        school.schoolId || school.id;
 
-if (emcccSnap.exists()) {
-  const emccc =
-    emcccSnap.data();
-
-  setEmcccData(emccc);
-
-  const weekNumber =
-    emccc.nextTrainingWeek || 1;
-
-  const weekId =
-    `week${String(
-      weekNumber
-    ).padStart(2, "0")}`;
-
-  const trainingSnapshot =
-    await getDocs(
-      collection(
-        db,
-        "weeklyTraining"
-      )
-    );
-
-  const trainingDoc =
-    trainingSnapshot.docs.find(
-      (doc) =>
-        doc.id.startsWith(
-          weekId
+      // Load this school's EMCCC record.
+      const emcccSnap = await getDoc(
+        doc(
+          db,
+          "emcccSchools",
+          schoolId
         )
-    );
+      );
 
-  if (trainingDoc) {
-    setCurrentTraining({
-      id:
-        trainingDoc.id,
-      ...trainingDoc.data(),
-    });
-  }
-}
+      if (emcccSnap.exists()) {
+        const emccc = emcccSnap.data();
 
+        setEmcccData(emccc);
+
+        // IMPORTANT:
+        // Every school has its own training position.
+        // School A can be on Week 1 while another is on Week 4.
+        const weekNumber =
+          Number(emccc.nextTrainingWeek) || 1;
+
+        const weekId =
+          `week${String(
+            weekNumber
+          ).padStart(2, "0")}`;
+
+        const trainingSnapshot =
+          await getDocs(
+            collection(
+              db,
+              "weeklyTraining"
+            )
+          );
+
+        const trainingDoc =
+          trainingSnapshot.docs.find(
+            (training) =>
+              training.id.startsWith(
+                weekId
+              )
+          );
+
+        if (trainingDoc) {
+          setCurrentTraining({
+            id: trainingDoc.id,
+            ...trainingDoc.data()
+          });
+        } else {
+          console.warn(
+            "No training document found for:",
+            weekId
+          );
+        }
+      } else {
+        console.warn(
+          "No EMCCC record found for school:",
+          schoolId
+        );
+      }
       const logsQuery = query(
         collection(db, "recyclingLogs"),
         where(
@@ -402,6 +422,16 @@ const submitActivity =
     </div>
   </div>
 )}
+
+
+      <div style={{ marginTop: "20px", marginBottom: "20px" }}>
+        <button
+          style={styles.button}
+          onClick={() => navigate("/weekly-checklist")}
+        >
+          Open Weekly Checklist
+        </button>
+      </div>
 {currentTraining && (
   <div style={styles.section}>
     <h2>
@@ -445,6 +475,7 @@ const submitActivity =
       <div style={styles.section}>
 
         <h2>
+
  {currentTraining && (
   <div style={styles.section}>
     <h2>
@@ -578,3 +609,8 @@ input: {
   borderRadius: "8px",
 },
 };
+
+
+
+
+

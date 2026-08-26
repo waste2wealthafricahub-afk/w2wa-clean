@@ -22,28 +22,18 @@ import {
 } from "firebase/firestore";
 
 export default function Login() {
-
-  const [email, setEmail] =
-    useState("");
-
-  const [password, setPassword] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
-  const handleLogin = async (
-    e
-  ) => {
-
+  const handleLogin = async (e) => {
     e.preventDefault();
 
     setLoading(true);
 
     try {
-
       await signInWithEmailAndPassword(
         auth,
         email,
@@ -53,66 +43,47 @@ export default function Login() {
       // =====================
       // ADMIN
       // =====================
-// =====================
-// ADMIN
-// =====================
-if (
-  email ===
-  "waste2wealthafricahub@gmail.com"
-) {
+      if (
+        email ===
+        "waste2wealthafricahub@gmail.com"
+      ) {
+        navigate("/admin-dashboard");
+        setLoading(false);
+        return;
+      }
 
-  navigate(
-    "/admin-dashboard"
-  );
+      // =====================
+      // MINISTRY MONITOR
+      // =====================
+      const monitorQuery = query(
+        collection(db, "monitors"),
+        where("email", "==", email)
+      );
 
-  setLoading(false);
+      const monitorSnapshot =
+        await getDocs(monitorQuery);
 
-  return;
-}
-// =====================
-// MONITOR
-// =====================
-const monitorQuery = query(
-  collection(
-    db,
-    "monitors"
-  ),
-  where(
-    "email",
-    "==",
-    email
-  )
-);
+      if (!monitorSnapshot.empty) {
+        const monitorData =
+          monitorSnapshot.docs[0].data();
 
-const monitorSnapshot =
-  await getDocs(
-    monitorQuery
-  );
+        if (!monitorData.approved) {
+          alert(
+            "Monitor not approved yet"
+          );
 
-if (!monitorSnapshot.empty) {
-  const monitorData =
-    monitorSnapshot.docs[0].data();
+          setLoading(false);
+          return;
+        }
 
-  if (
-    !monitorData.approved
-  ) {
-    alert(
-      "Monitor not approved yet"
-    );
+        navigate(
+          "/monitoring-dashboard"
+        );
 
-    setLoading(false);
+        setLoading(false);
+        return;
+      }
 
-    return;
-  }
-
-  navigate(
-    "/monitoring-dashboard"
-  );
-
-  setLoading(false);
-
-  return;
-}
       // =====================
       // REPRESENTATIVE
       // =====================
@@ -121,38 +92,28 @@ if (!monitorSnapshot.empty) {
           db,
           "representatives"
         ),
-        where(
-          "email",
-          "==",
-          email
-        )
+        where("email", "==", email)
       );
 
       const repSnapshot =
         await getDocs(repQuery);
 
       if (!repSnapshot.empty) {
-
         const repData =
           repSnapshot.docs[0].data();
 
         if (!repData.approved) {
-
           alert(
             "Representative not approved yet"
           );
 
           setLoading(false);
-
           return;
         }
 
-        navigate(
-          "/rep-dashboard"
-        );
+        navigate("/rep-dashboard");
 
         setLoading(false);
-
         return;
       }
 
@@ -161,33 +122,22 @@ if (!monitorSnapshot.empty) {
       // =====================
       const schoolQuery = query(
         collection(db, "schools"),
-        where(
-          "email",
-          "==",
-          email
-        )
+        where("email", "==", email)
       );
 
       const schoolSnapshot =
-        await getDocs(
-          schoolQuery
-        );
+        await getDocs(schoolQuery);
 
       if (!schoolSnapshot.empty) {
-
-        navigate(
-          "/school-dashboard"
-        );
+        navigate("/school-dashboard");
 
         setLoading(false);
-
         return;
       }
 
       alert("User role not found");
 
     } catch (error) {
-
       console.error(error);
 
       alert(
@@ -204,10 +154,16 @@ if (!monitorSnapshot.empty) {
 
       <div style={styles.card}>
 
-        <h2>
-          W2WASCHOOL Login
+        {/* =====================
+            TITLE
+        ====================== */}
+        <h2 style={styles.title}>
+          EMCCC PORTAL
         </h2>
 
+        {/* =====================
+            LOGIN FORM
+        ====================== */}
         <form onSubmit={handleLogin}>
 
           <input
@@ -215,9 +171,7 @@ if (!monitorSnapshot.empty) {
             placeholder="Enter Email"
             value={email}
             onChange={(e) =>
-              setEmail(
-                e.target.value
-              )
+              setEmail(e.target.value)
             }
             required
             style={styles.input}
@@ -228,9 +182,7 @@ if (!monitorSnapshot.empty) {
             placeholder="Enter Password"
             value={password}
             onChange={(e) =>
-              setPassword(
-                e.target.value
-              )
+              setPassword(e.target.value)
             }
             required
             style={styles.input}
@@ -248,9 +200,12 @@ if (!monitorSnapshot.empty) {
 
         </form>
 
+        {/* =====================
+            REGISTRATION LINKS
+        ====================== */}
+
         <p style={styles.text}>
           New School?{" "}
-
           <Link
             to="/school-registration"
             style={styles.link}
@@ -261,7 +216,6 @@ if (!monitorSnapshot.empty) {
 
         <p style={styles.text}>
           Representative?{" "}
-
           <Link
             to="/rep-registration"
             style={styles.link}
@@ -271,15 +225,25 @@ if (!monitorSnapshot.empty) {
         </p>
 
         <p style={styles.text}>
-  Monitor?{" "}
+          Monitor?{" "}
+          <Link
+            to="/monitor-registration"
+            style={styles.link}
+          >
+            Register Here
+          </Link>
+        </p>
 
-  <Link
-    to="/monitor-registration"
-    style={styles.link}
-  >
-    Register Here
-  </Link>
-</p>
+        {/* =====================
+            FOOTER
+        ====================== */}
+
+        <p style={styles.footer}>
+          Powered by{" "}
+          <strong>
+            W2WA School Project
+          </strong>
+        </p>
 
       </div>
 
@@ -295,46 +259,71 @@ const styles = {
     alignItems: "center",
     minHeight: "100vh",
     backgroundColor: "#f4f6f8",
+    padding: "20px",
+    boxSizing: "border-box",
   },
 
   card: {
-    backgroundColor: "#fff",
-    padding: "30px",
-    borderRadius: "12px",
+    width: "100%",
+    maxWidth: "410px",
+    backgroundColor: "#ffffff",
+    padding: "40px 30px",
+    borderRadius: "14px",
     boxShadow:
-      "0 4px 10px rgba(0,0,0,0.1)",
-    width: "350px",
+      "0 5px 18px rgba(0,0,0,0.12)",
+    boxSizing: "border-box",
+  },
+
+  title: {
     textAlign: "center",
+    marginBottom: "30px",
+    fontSize: "26px",
+    color: "#111111",
   },
 
   input: {
     width: "100%",
     padding: "12px",
-    margin: "10px 0",
+    marginBottom: "14px",
+    border: "1px solid #c8c8c8",
     borderRadius: "6px",
-    border: "1px solid #ccc",
+    fontSize: "14px",
     boxSizing: "border-box",
+    backgroundColor: "#eef4ff",
   },
 
   button: {
     width: "100%",
     padding: "12px",
-    backgroundColor: "#007bff",
-    color: "#fff",
+    marginTop: "5px",
+    marginBottom: "12px",
     border: "none",
     borderRadius: "6px",
+    backgroundColor: "#087df5",
+    color: "#ffffff",
+    fontSize: "15px",
     cursor: "pointer",
-    marginTop: "10px",
   },
 
   text: {
-    marginTop: "15px",
+    textAlign: "center",
+    margin: "13px 0",
     fontSize: "14px",
   },
 
   link: {
-    color: "#007bff",
+    color: "#0066ff",
+    fontWeight: "600",
     textDecoration: "none",
-    fontWeight: "bold",
+  },
+
+  footer: {
+    textAlign: "center",
+    marginTop: "28px",
+    paddingTop: "15px",
+    borderTop:
+      "1px solid #eeeeee",
+    fontSize: "13px",
+    color: "#777777",
   },
 };

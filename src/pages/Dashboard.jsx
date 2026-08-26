@@ -121,11 +121,12 @@ export default function Dashboard() {
 
       <br /><br />
 
-      <button onClick={() => navigate("/checklist")}>
+      <button onClick={() => navigate("/weekly-checklist")}>
         📅 Weekly Tasks
       </button>
     </div>
   );
 }
+
 
 

@@ -17,6 +17,14 @@ import AdminDashboard from "./pages/AdminDashboard";
 import MonitoringDashboard from "./pages/MonitoringDashboard";
 import UserManagement from "./pages/UserManagement";
 
+import WeeklyChecklist from "./pages/WeeklyChecklist";
+import ProofReview from "./pages/ProofReview.jsx";
+import ClubActivities from "./pages/ClubActivities";
+import TrainingModules from "./pages/TrainingModules";
+import Activities from "./pages/Activities";
+import Reports from "./pages/Reports";
+import Rewards from "./pages/Rewards";
+
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
@@ -61,6 +69,69 @@ export default function App() {
           element={
             <ProtectedRoute allowedRole="school">
               <SchoolWalletDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* SCHOOL PROGRAMME MODULES */}
+        <Route
+          path="/weekly-checklist"
+          element={
+            <ProtectedRoute allowedRole="school">
+              <WeeklyChecklist />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+  path="/proof-review"
+  element={
+    <ProtectedRoute allowedRole="admin">
+      <ProofReview />
+    </ProtectedRoute>
+  }
+/>
+
+        <Route
+          path="/club-activities"
+          element={
+            <ProtectedRoute allowedRole="school">
+              <ClubActivities />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/training-modules"
+          element={
+            <ProtectedRoute allowedRole="school">
+              <TrainingModules />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/activities"
+          element={
+            <ProtectedRoute allowedRole="school">
+              <Activities />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute allowedRole="school">
+              <Reports />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/rewards"
+          element={
+            <ProtectedRoute allowedRole="school">
+              <Rewards />
             </ProtectedRoute>
           }
         />

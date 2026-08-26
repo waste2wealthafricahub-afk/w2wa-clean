@@ -1,4 +1,4 @@
-import React, {
+﻿import React, {
   useEffect,
   useState,
 } from "react";
@@ -208,7 +208,7 @@ export default function MonitoringDashboard() {
 
               if (!hasPatron) {
                 alerts.push(
-                  `${school.schoolName} — No patron assigned`
+                  `${school.schoolName} â€” No patron assigned`
                 );
               }
 
@@ -216,7 +216,7 @@ export default function MonitoringDashboard() {
                 !hasCoordinator
               ) {
                 alerts.push(
-                  `${school.schoolName} — No coordinator assigned`
+                  `${school.schoolName} â€” No coordinator assigned`
                 );
               }
 
@@ -224,7 +224,7 @@ export default function MonitoringDashboard() {
                 !launchCompleted
               ) {
                 alerts.push(
-                  `${school.schoolName} — EMCCC launch pending`
+                  `${school.schoolName} â€” EMCCC launch pending`
                 );
               }
 
@@ -240,16 +240,22 @@ export default function MonitoringDashboard() {
                   "Compliant";
               }
 
-              return {
-                schoolName:
-                  school.schoolName,
-                hasPatron,
-                hasCoordinator,
-                launchCompleted,
-                week:
-                  school.weekCompleted || 0,
-                status,
-              };
+             return {
+  schoolName:
+    school.schoolName,
+  hasPatron,
+  hasCoordinator,
+  launchCompleted,
+  completedWeek:
+    Number(
+      school.weekCompleted
+    ) || 0,
+  currentWeek:
+    Number(
+      school.nextTrainingWeek
+    ) || 1,
+  status,
+};
             }
           );
 
@@ -346,7 +352,7 @@ export default function MonitoringDashboard() {
                   key={i}
                   style={styles.alert}
                 >
-                  🚨 {alert}
+                  ðŸš¨ {alert}
                 </div>
               )
             )}
@@ -364,7 +370,8 @@ export default function MonitoringDashboard() {
               <th style={styles.th}>Patron</th>
               <th style={styles.th}>Coordinator</th>
               <th style={styles.th}>Launch</th>
-              <th style={styles.th}>Week</th>
+              <th style={styles.th}>Completed</th>
+<th style={styles.th}>Current Week</th>
               <th style={styles.th}>Status</th>
             </tr>
           </thead>
@@ -376,7 +383,13 @@ export default function MonitoringDashboard() {
                   <td style={styles.td}>{school.hasPatron ? "Yes" : "No"}</td>
                   <td style={styles.td}>{school.hasCoordinator ? "Yes" : "No"}</td>
                   <td style={styles.td}>{school.launchCompleted ? "Done" : "Pending"}</td>
-                  <td style={styles.td}>{school.week}/10</td>
+                  <td style={styles.td}>
+  {school.completedWeek}/10
+</td>
+
+<td style={styles.td}>
+  {school.currentWeek}/10
+</td>
                   <td style={styles.td}>{school.status}</td>
                 </tr>
               )
@@ -525,3 +538,4 @@ const styles = {
     cursor: "pointer",
   },
 };
+

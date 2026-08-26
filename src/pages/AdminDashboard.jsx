@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+﻿import { useNavigate } from "react-router-dom";
 import React, {
   useEffect,
   useState,
@@ -384,19 +384,19 @@ setEmcccStats(stats);
               revenue > 30000
             )
               rating =
-                "⭐⭐⭐⭐⭐";
+                "â­â­â­â­â­";
             else if (
               revenue > 15000
             )
-              rating = "⭐⭐⭐⭐";
+              rating = "â­â­â­â­";
             else if (
               revenue > 5000
             )
-              rating = "⭐⭐⭐";
+              rating = "â­â­â­";
             else if (
               revenue > 0
             )
-              rating = "⭐⭐";
+              rating = "â­â­";
 
             return {
               name:
@@ -590,12 +590,47 @@ setEmcccStats(stats);
       } catch (error) {
         console.error(error);
       }
+    };  const approveEmcccActivity =
+    async (activity) => {
+      try {
+        // Mark the EMCCC activity as approved.
+        // Weekly training progression is handled exclusively
+        // by Proof Review to prevent double advancement.
+        await updateDoc(
+          doc(
+            db,
+            "emcccActivities",
+            activity.id
+          ),
+          {
+            status: "approved",
+            approvedAt: new Date(),
+          }
+        );
+
+        alert(
+          "EMCCC activity approved"
+        );
+
+        // Refresh dashboard data.
+        fetchDashboardData();
+
+      } catch (error) {
+        console.error(
+          "EMCCC approval error:",
+          error
+        );
+
+        alert(
+          error.message ||
+            "Unable to approve EMCCC activity."
+        );
+      }
     };
 
+
   const approveWithdrawal =
-    async (
-      request
-    ) => {
+    async (request) => {
       try {
         const walletRef =
           doc(
@@ -605,98 +640,12 @@ setEmcccStats(stats);
           );
 
         const walletSnap =
-          await getDoc(
-            walletRef
-          );
+          await getDoc(walletRef);
 
-        if (
-          !walletSnap.exists()
-        ) {
+        if (!walletSnap.exists()) {
           alert(
             "Wallet not found"
           );
-          const approveEmcccActivity =
-  async (activity) => {
-    try {
-      await updateDoc(
-        doc(
-          db,
-          "emcccActivities",
-          activity.id
-        ),
-        {
-          status: "approved",
-          approvedAt:
-            new Date(),
-        }
-      );
-
-      const schoolRef =
-        doc(
-          db,
-          "emcccSchools",
-          activity.schoolId
-        );
-
-      const schoolSnap =
-        await getDoc(
-          schoolRef
-        );
-
-      if (
-        schoolSnap.exists()
-      ) {
-        const schoolData =
-          schoolSnap.data();
-
-        const currentWeek =
-          schoolData
-            .weekCompleted ||
-          0;
-
-        const nextWeek =
-          currentWeek + 1;
-
-        if (
-          nextWeek >= 10
-        ) {
-          await updateDoc(
-            schoolRef,
-            {
-              weekCompleted:
-                10,
-              nextTrainingWeek:
-                10,
-              status:
-                "graduated",
-            }
-          );
-        } else {
-          await updateDoc(
-            schoolRef,
-            {
-              weekCompleted:
-                nextWeek,
-              nextTrainingWeek:
-                nextWeek + 1,
-              status:
-                "training",
-            }
-          );
-        }
-      }
-
-      alert(
-        "EMCCC activity approved"
-      );
-
-      fetchDashboardData();
-
-    } catch (error) {
-      console.error(error);
-      alert(error.message);
-    }
-  };
           return;
         }
 
@@ -759,8 +708,17 @@ setEmcccStats(stats);
         );
 
         fetchDashboardData();
+
       } catch (error) {
-        console.error(error);
+        console.error(
+          "Withdrawal approval error:",
+          error
+        );
+
+        alert(
+          error.message ||
+            "Unable to approve withdrawal."
+        );
       }
     };
 
@@ -844,8 +802,25 @@ setEmcccStats(stats);
       navigate("/user-management")
     }
   >
-    👥 User Management
+    ðŸ‘¥ User Management
   </button>
+<button
+  style={{
+    padding: "12px 20px",
+    background: "#16a34a",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: "bold",
+    marginLeft: "10px",
+  }}
+  onClick={() =>
+    navigate("/proof-review")
+}
+>
+  Proof Review
+</button>
 </div>
       <div
         style={
@@ -880,7 +855,7 @@ setEmcccStats(stats);
 
         <Card
           title="Recycling Value"
-          value={`₦${totalValue.toLocaleString()}`}
+          value={`â‚¦${totalValue.toLocaleString()}`}
         />
       </div>
 
@@ -891,12 +866,12 @@ setEmcccStats(stats);
       >
         <Card
           title="Platform Revenue"
-          value={`₦${platformRevenue.toLocaleString()}`}
+          value={`â‚¦${platformRevenue.toLocaleString()}`}
         />
 
         <Card
           title="Total Float Funded"
-          value={`₦${totalFloatFunded.toLocaleString()}`}
+          value={`â‚¦${totalFloatFunded.toLocaleString()}`}
         />
 
         <Card
@@ -908,7 +883,7 @@ setEmcccStats(stats);
 
         <Card
           title="Withdrawals Paid"
-          value={`₦${totalWithdrawalsPaid.toLocaleString()}`}
+          value={`â‚¦${totalWithdrawalsPaid.toLocaleString()}`}
         />
         <div style={styles.section}>
   <h2>
@@ -1094,7 +1069,7 @@ setEmcccStats(stats);
                     {request.schoolId}
                   </td>
                   <td style={styles.td}>
-                    ₦
+                    â‚¦
                     {Number(
                       request.amount ||
                         0
@@ -1219,7 +1194,7 @@ setEmcccStats(stats);
                   {log.totalWeight}kg
                 </td>
                 <td style={styles.td}>
-                  ₦
+                  â‚¦
                   {Number(
                     log.totalValue ||
                       0
