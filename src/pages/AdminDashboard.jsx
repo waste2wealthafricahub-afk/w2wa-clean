@@ -1,4 +1,4 @@
-﻿import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import React, {
   useEffect,
   useState,
@@ -384,19 +384,19 @@ setEmcccStats(stats);
               revenue > 30000
             )
               rating =
-                "â­â­â­â­â­";
+                "⭐⭐⭐⭐⭐";
             else if (
               revenue > 15000
             )
-              rating = "â­â­â­â­";
+              rating = "⭐⭐⭐⭐";
             else if (
               revenue > 5000
             )
-              rating = "â­â­â­";
+              rating = "⭐⭐⭐";
             else if (
               revenue > 0
             )
-              rating = "â­â­";
+              rating = "⭐⭐";
 
             return {
               name:
@@ -802,7 +802,7 @@ setEmcccStats(stats);
       navigate("/user-management")
     }
   >
-    ðŸ‘¥ User Management
+    User Management
   </button>
 <button
   style={{
@@ -855,7 +855,7 @@ setEmcccStats(stats);
 
         <Card
           title="Recycling Value"
-          value={`â‚¦${totalValue.toLocaleString()}`}
+          value={`\u20A6${totalValue.toLocaleString()}`}
         />
       </div>
 
@@ -866,12 +866,12 @@ setEmcccStats(stats);
       >
         <Card
           title="Platform Revenue"
-          value={`â‚¦${platformRevenue.toLocaleString()}`}
+          value={`\u20A6${platformRevenue.toLocaleString()}`}
         />
 
         <Card
           title="Total Float Funded"
-          value={`â‚¦${totalFloatFunded.toLocaleString()}`}
+          value={`\u20A6${totalFloatFunded.toLocaleString()}`}
         />
 
         <Card
@@ -883,7 +883,7 @@ setEmcccStats(stats);
 
         <Card
           title="Withdrawals Paid"
-          value={`â‚¦${totalWithdrawalsPaid.toLocaleString()}`}
+          value={`\u20A6${totalWithdrawalsPaid.toLocaleString()}`}
         />
         <div style={styles.section}>
   <h2>
@@ -1069,7 +1069,7 @@ setEmcccStats(stats);
                     {request.schoolId}
                   </td>
                   <td style={styles.td}>
-                    â‚¦
+                    ₦
                     {Number(
                       request.amount ||
                         0
@@ -1194,7 +1194,7 @@ setEmcccStats(stats);
                   {log.totalWeight}kg
                 </td>
                 <td style={styles.td}>
-                  â‚¦
+                  ₦
                   {Number(
                     log.totalValue ||
                       0
@@ -1276,3 +1276,9 @@ const styles = {
     borderRadius: "8px",
   },
 };
+
+
+
+
+
+

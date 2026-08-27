@@ -219,13 +219,13 @@ emcccSnap.forEach((item) => {
               );
 
             const emcccUpdate = {
-              weekCompleted: weekNumber,
-              nextTrainingWeek: nextWeek,
-              status:
-                weekNumber === 10
-                  ? "graduated"
-                  : "training"
-            };
+  weekCompleted: weekNumber,
+  nextTrainingWeek: nextWeek,
+  status:
+    weekNumber === 10
+      ? "graduated"
+      : "training"
+};
 
             // Week 1 is the EMCCC Launch Ceremony.
             // Once Week 1 is approved, record the launch date.
@@ -293,11 +293,10 @@ emcccSnap.forEach((item) => {
         approving progression to the next week.
       </p>
 
-      {submissions.filter(
+     {submissions.filter(
   (s) =>
     s.status !== "approved" &&
-    s.status !== "rejected" &&
-    s.isCurrentWeek
+    s.status !== "rejected"
 ).length === 0 && (
   <p>No pending submissions requiring review.</p>
 )}
@@ -305,8 +304,7 @@ emcccSnap.forEach((item) => {
   .filter(
     (s) =>
       s.status !== "approved" &&
-      s.status !== "rejected" &&
-      s.isCurrentWeek
+      s.status !== "rejected"
   )
   .map((s) => (
         <div
@@ -457,5 +455,4 @@ emcccSnap.forEach((item) => {
     </div>
   );
 }
-
 
