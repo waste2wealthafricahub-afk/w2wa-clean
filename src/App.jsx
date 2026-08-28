@@ -11,6 +11,7 @@ import MonitorRegistration from "./pages/MonitorRegistration";
 
 import SchoolDashboard from "./pages/SchoolDashboard";
 import SchoolWalletDashboard from "./pages/SchoolWalletDashboard";
+import WalletDashboard from "./pages/WalletDashboard";
 import RepresentativeDashboard from "./pages/RepresentativeDashboard";
 
 import AdminDashboard from "./pages/AdminDashboard";
@@ -145,6 +146,14 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+<Route
+  path="/rep-wallet"
+  element={
+    <ProtectedRoute allowedRole="representative">
+      <WalletDashboard />
+    </ProtectedRoute>
+  }
+/>
 
         {/* ADMIN */}
         <Route

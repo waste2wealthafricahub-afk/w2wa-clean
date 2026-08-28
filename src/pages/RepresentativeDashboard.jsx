@@ -1,7 +1,9 @@
-import React, {
+import {
   useEffect,
   useState,
 } from "react";
+
+import { useNavigate } from "react-router-dom";
 
 import {
   collection,
@@ -23,6 +25,8 @@ import {
 } from "../services/walletService";
 
 export default function RepresentativeDashboard() {
+  const navigate = useNavigate();
+
   const [schools, setSchools] =
     useState([]);
 
@@ -285,6 +289,12 @@ export default function RepresentativeDashboard() {
       <p>
         Record school waste collections
       </p>
+<button
+  onClick={() => navigate("/rep-wallet")}
+  style={styles.button}
+>
+  Wallet
+</button>
 
       {/* PRICE CARD */}
       <div style={styles.card}>
