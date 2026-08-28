@@ -13,6 +13,7 @@ import {
   getDoc,
   increment,
   setDoc,
+  arrayUnion,
 } from "firebase/firestore";
 
 import { db } from "../firebase";
@@ -72,6 +73,11 @@ const navigate = useNavigate();
   const [selectedRep,
     setSelectedRep] =
     useState("");
+
+      const [
+    selectedAssignmentRep,
+    setSelectedAssignmentRep,
+  ] = useState({});
 
   const [platformRevenue,
     setPlatformRevenue] =
@@ -547,6 +553,43 @@ setEmcccStats(stats);
 }
     };
 
+  const assignSchoolToRepresentative =
+    async (
+      schoolId,
+      representativeId
+    ) => {
+      try {
+        if (!representativeId) {
+          alert(
+            "Select a representative"
+          );
+          return;
+        }
+
+        await updateDoc(
+          doc(
+            db,
+            "representatives",
+            representativeId
+          ),
+          {
+            assignedSchoolIds:
+              arrayUnion(schoolId),
+          }
+        );
+
+        alert(
+          "School assigned successfully"
+        );
+
+        fetchDashboardData();
+
+      } catch (error) {
+        console.error(error);
+        alert(error.message);
+      }
+    };
+
   const handleFundRep =
     async () => {
       try {
@@ -919,27 +962,86 @@ setEmcccStats(stats);
   </div>
 </div>
       </div>
-            <div style={styles.section}>
+                  <div style={styles.section}>
         <h2>School Approvals</h2>
+
         <table style={styles.table}>
           <thead>
             <tr>
-              <th style={styles.th}>School</th>
-              <th style={styles.th}>Status</th>
-              <th style={styles.th}>Action</th>
+              <th style={styles.th}>
+                School
+              </th>
+
+              <th style={styles.th}>
+                Status
+              </th>
+
+              <th style={styles.th}>
+                Representative
+              </th>
+
+              <th style={styles.th}>
+                Action
+              </th>
             </tr>
           </thead>
+
           <tbody>
             {schools.map((school) => (
               <tr key={school.id}>
+
                 <td style={styles.td}>
                   {school.schoolName}
                 </td>
+
                 <td style={styles.td}>
                   {school.approved
                     ? "Approved"
                     : "Pending"}
                 </td>
+
+                <td style={styles.td}>
+                  {school.approved ? (
+                    <select
+                      value={
+                        selectedAssignmentRep[
+                          school.id
+                        ] || ""
+                      }
+                      onChange={(e) =>
+                        setSelectedAssignmentRep(
+                          (prev) => ({
+                            ...prev,
+                            [school.id]:
+                              e.target.value,
+                          })
+                        )
+                      }
+                      style={styles.input}
+                    >
+                      <option value="">
+                        Select Representative
+                      </option>
+
+                      {representatives
+                        .filter(
+                          (rep) =>
+                            rep.approved
+                        )
+                        .map((rep) => (
+                          <option
+                            key={rep.id}
+                            value={rep.id}
+                          >
+                            {rep.fullName}
+                          </option>
+                        ))}
+                    </select>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+
                 <td style={styles.td}>
                   {!school.approved && (
                     <button
@@ -955,7 +1057,24 @@ setEmcccStats(stats);
                       Approve
                     </button>
                   )}
+
+                  {school.approved && (
+                    <button
+                      style={styles.button}
+                      onClick={() =>
+                        assignSchoolToRepresentative(
+                          school.schoolId,
+                          selectedAssignmentRep[
+                            school.id
+                          ]
+                        )
+                      }
+                    >
+                      Assign
+                    </button>
+                  )}
                 </td>
+
               </tr>
             ))}
           </tbody>

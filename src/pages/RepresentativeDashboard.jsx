@@ -4,6 +4,7 @@ import {
 } from "react";
 
 import { useNavigate } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
 
 import {
   collection,
@@ -60,11 +61,19 @@ export default function RepresentativeDashboard() {
   // =========================
   // LOAD ALL DATA
   // =========================
-  useEffect(() => {
-    fetchSchools();
-    fetchPrices();
-    fetchCollections();
-  }, []);
+useEffect(() => {
+  const unsubscribe =
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        fetchSchools();
+      }
+    });
+
+  fetchPrices();
+  fetchCollections();
+
+  return () => unsubscribe();
+}, []);
 
   // =========================
   // FETCH ASSIGNED SCHOOLS
@@ -76,23 +85,24 @@ export default function RepresentativeDashboard() {
       if (!user) return;
 
       // Get the logged-in Representative
-      const repRef = doc(
-        db,
-        "representatives",
-        user.uid
-      );
+    const repQuery = query(
+  collection(db, "representatives"),
+  where("uid", "==", user.uid)
+);
 
-      const repSnap =
-        await getDoc(repRef);
+const repSnapshot =
+  await getDocs(repQuery);
 
-      if (!repSnap.exists()) {
-        setSchools([]);
-        return;
-      }
+if (repSnapshot.empty) {
+  setSchools([]);
+  return;
+}
 
-      const assignedSchoolIds =
-        repSnap.data().assignedSchoolIds || [];
+const repData =
+  repSnapshot.docs[0].data();
 
+const assignedSchoolIds =
+  repData.assignedSchoolIds || [];
       if (assignedSchoolIds.length === 0) {
         setSchools([]);
         return;
@@ -110,11 +120,11 @@ export default function RepresentativeDashboard() {
             id: doc.id,
             ...doc.data(),
           }))
-          .filter((school) =>
-            assignedSchoolIds.includes(
-              school.id
-            )
-          );
+         .filter((school) =>
+  assignedSchoolIds.includes(
+    school.schoolId
+  )
+);
 
       setSchools(schoolList);
 
@@ -150,10 +160,21 @@ export default function RepresentativeDashboard() {
   // =========================
   const fetchCollections = async () => {
     try {
-      const snapshot =
-        await getDocs(
-          collection(db, "collections")
-        );
+     const repId =
+  auth.currentUser?.uid;
+
+if (!repId) {
+  setCollectionHistory([]);
+  return;
+}
+
+const collectionsQuery = query(
+  collection(db, "collections"),
+  where("repId", "==", repId)
+);
+
+const snapshot =
+  await getDocs(collectionsQuery);
 
       const list =
         snapshot.docs.map((doc) => ({
@@ -469,7 +490,10 @@ export default function RepresentativeDashboard() {
               (item) => (
                 <tr key={item.id}>
                   <td style={styles.td}>
-                    {item.schoolId}
+                    {schools.find(
+  (school) =>
+    school.schoolId === item.schoolId
+)?.schoolName || item.schoolId}
                   </td>
 
                   <td style={styles.td}>
