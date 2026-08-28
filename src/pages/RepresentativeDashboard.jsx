@@ -67,23 +67,54 @@ export default function RepresentativeDashboard() {
   }, []);
 
   // =========================
-  // FETCH APPROVED SCHOOLS
+  // FETCH ASSIGNED SCHOOLS
   // =========================
   const fetchSchools = async () => {
     try {
-      const schoolQuery = query(
-        collection(db, "schools"),
-        where("approved", "==", true)
+      const user = auth.currentUser;
+
+      if (!user) return;
+
+      // Get the logged-in Representative
+      const repRef = doc(
+        db,
+        "representatives",
+        user.uid
       );
 
-      const snapshot =
-        await getDocs(schoolQuery);
+      const repSnap =
+        await getDoc(repRef);
+
+      if (!repSnap.exists()) {
+        setSchools([]);
+        return;
+      }
+
+      const assignedSchoolIds =
+        repSnap.data().assignedSchoolIds || [];
+
+      if (assignedSchoolIds.length === 0) {
+        setSchools([]);
+        return;
+      }
+
+      // Fetch schools
+      const schoolsSnapshot =
+        await getDocs(
+          collection(db, "schools")
+        );
 
       const schoolList =
-        snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        schoolsSnapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .filter((school) =>
+            assignedSchoolIds.includes(
+              school.id
+            )
+          );
 
       setSchools(schoolList);
 
@@ -91,7 +122,6 @@ export default function RepresentativeDashboard() {
       console.error(error);
     }
   };
-
   // =========================
   // FETCH CURRENT PRICES
   // =========================
