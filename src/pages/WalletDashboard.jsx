@@ -38,11 +38,11 @@ export default function WalletDashboard() {
 
       if (!user) return;
 
-      const walletRef = doc(
-        db,
-        "wallets",
-        user.uid
-      );
+     const walletRef = doc(
+  db,
+  "repWallets",
+  user.uid
+);
 
       const walletSnap =
         await getDoc(walletRef);
@@ -51,10 +51,10 @@ export default function WalletDashboard() {
         setWallet(walletSnap.data());
       }
 
-      const transactionQuery = query(
-        collection(db, "transactions"),
-        where("uid", "==", user.uid)
-      );
+     const transactionQuery = query(
+  collection(db, "transactions"),
+  where("repId", "==", user.uid)
+);
 
       const transactionSnap =
         await getDocs(transactionQuery);
@@ -83,14 +83,19 @@ export default function WalletDashboard() {
           Current Balance
         </h3>
 
-        <h1>
-          ₦{wallet?.balance || 0}
-        </h1>
+       <h1>
+  ₦{Number(wallet?.floatBalance || 0).toLocaleString()}
+</h1>
 
-        <p>
-          Total Earned:
-          ₦{wallet?.totalEarned || 0}
-        </p>
+<p>
+  Total Purchases:
+  ₦{Number(wallet?.totalPurchases || 0).toLocaleString()}
+</p>
+
+<p>
+  Total Levies Paid:
+  ₦{Number(wallet?.totalLeviesPaid || 0).toLocaleString()}
+</p>
 
       </div>
 
