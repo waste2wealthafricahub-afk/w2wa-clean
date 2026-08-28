@@ -103,12 +103,28 @@ export const fundRepWallet =
       repId
     );
 
-    await updateDoc(walletRef, {
-      floatBalance:
-        increment(amount),
-      lastTopUp:
-        serverTimestamp(),
-    });
+    const walletSnap =
+      await getDoc(walletRef);
+
+    if (!walletSnap.exists()) {
+      await setDoc(walletRef, {
+        repId,
+        floatBalance: amount,
+        totalPurchases: 0,
+        totalLeviesPaid: 0,
+        createdAt:
+          serverTimestamp(),
+        lastTopUp:
+          serverTimestamp(),
+      });
+    } else {
+      await updateDoc(walletRef, {
+        floatBalance:
+          increment(amount),
+        lastTopUp:
+          serverTimestamp(),
+      });
+    }
 
     await addDoc(
       collection(
@@ -127,7 +143,7 @@ export const fundRepWallet =
           serverTimestamp(),
       }
     );
-  };
+   };
 
 // =============================
 // PROCESS COLLECTION PURCHASE
