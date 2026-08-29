@@ -115,22 +115,37 @@ export default function WalletDashboard() {
           </thead>
 
           <tbody>
-            {transactions.map((item, index) => (
-              <tr key={index}>
-                <td style={styles.td}>
-                  {item.type}
-                </td>
+  {transactions.map((item, index) => (
+    <tr key={index}>
+      <td style={styles.td}>
+        {item.type === "float_topup"
+          ? "Float Top-up"
+          : item.type === "rep_debit"
+          ? "Collection Purchase"
+          : item.type === "school_payment"
+          ? "School Payment"
+          : item.type}
+      </td>
 
-                <td style={styles.td}>
-                  ₦{item.amount}
-                </td>
+      <td style={styles.td}>
+        {item.type === "float_topup"
+          ? "+"
+          : item.type === "rep_debit"
+          ? "-"
+          : ""}
+        ₦{Number(item.amount || 0).toLocaleString()}
+      </td>
 
-                <td style={styles.td}>
-                  {item.description}
-                </td>
-              </tr>
-            ))}
-          </tbody>
+      <td style={styles.td}>
+        {item.type === "float_topup"
+          ? "Admin-funded representative float"
+          : item.type === "rep_debit"
+          ? "Waste collection purchase"
+          : item.description || "-"}
+      </td>
+    </tr>
+  ))}
+</tbody>
         </table>
 
       </div>
