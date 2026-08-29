@@ -1004,10 +1004,15 @@ setEmcccStats(stats);
                   {school.approved ? (
                     <select
                       value={
-                        selectedAssignmentRep[
-                          school.id
-                        ] || ""
-                      }
+  selectedAssignmentRep[school.id] ||
+  representatives.find(
+    (rep) =>
+      rep.assignedSchoolIds?.includes(
+        school.schoolId
+      )
+  )?.id ||
+  ""
+}
                       onChange={(e) =>
                         setSelectedAssignmentRep(
                           (prev) => ({
