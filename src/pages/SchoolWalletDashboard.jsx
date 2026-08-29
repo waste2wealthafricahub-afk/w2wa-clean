@@ -206,12 +206,6 @@ export default function SchoolWalletDashboard() {
           ).toLocaleString()}
         </p>
 
-        <p>
-          Total Deductions: ₦
-          {Number(
-            wallet?.totalDeductions || 0
-          ).toLocaleString()}
-        </p>
       </div>
 
       <div style={styles.card}>
