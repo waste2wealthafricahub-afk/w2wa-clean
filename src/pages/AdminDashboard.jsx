@@ -233,6 +233,22 @@ setEmcccStats(stats);
 
         setLogs(logsList);
 
+                const collectionsSnapshot =
+          await getDocs(
+            collection(
+              db,
+              "collections"
+            )
+          );
+
+        const collectionRecords =
+          collectionsSnapshot.docs.map(
+            (doc) => ({
+              id: doc.id,
+              ...doc.data(),
+            })
+          );
+
         const trainingSnapshot =
           await getDocs(
             collection(
@@ -350,38 +366,40 @@ setEmcccStats(stats);
           withdrawalsPaid
         );
 
-        const performanceData =
+                const performanceData =
           repsList.map((rep) => {
-            const repTx =
-              txList.filter(
-                (tx) =>
-                  tx.repId ===
+
+            const repCollections =
+              collectionRecords.filter(
+                (item) =>
+                  item.repId ===
                   rep.uid
               );
 
             const collections =
-              repTx.filter(
-                (tx) =>
-                  tx.type ===
-                  "rep_debit"
-              ).length;
+              repCollections.length;
 
             const revenue =
-              repTx
-                .filter(
-                  (tx) =>
-                    tx.type ===
-                    "rep_debit"
-                )
-                .reduce(
-                  (sum, tx) =>
-                    sum +
-                    Number(
-                      tx.amount ||
-                        0
-                    ),
-                  0
-                );
+              repCollections.reduce(
+                (sum, item) =>
+                  sum +
+                  Number(
+                    item.totalValue ||
+                      0
+                  ),
+                0
+              );
+
+            const wasteKg =
+              repCollections.reduce(
+                (sum, item) =>
+                  sum +
+                  Number(
+                    item.totalWeight ||
+                      0
+                  ),
+                0
+              );
 
             let rating =
               "Inactive";
@@ -394,29 +412,30 @@ setEmcccStats(stats);
             else if (
               revenue > 15000
             )
-              rating = "⭐⭐⭐⭐";
+              rating =
+                "⭐⭐⭐⭐";
             else if (
               revenue > 5000
             )
-              rating = "⭐⭐⭐";
+              rating =
+                "⭐⭐⭐";
             else if (
               revenue > 0
             )
-              rating = "⭐⭐";
+              rating =
+                "⭐⭐";
 
             return {
               name:
                 rep.fullName ||
                 "Unknown",
+
               collections,
+
               revenue,
-              wasteKg:
-                revenue > 0
-                  ? Math.round(
-                      revenue /
-                        250
-                    )
-                  : 0,
+
+              wasteKg,
+
               rating,
             };
           });
@@ -1180,6 +1199,49 @@ setEmcccStats(stats);
         >
           Fund Wallet
         </button>
+      </div>
+            <div style={styles.section}>
+        <h2>Representative Performance</h2>
+
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th style={styles.th}>Representative</th>
+              <th style={styles.th}>Collections</th>
+              <th style={styles.th}>Purchase Value</th>
+              <th style={styles.th}>Waste (kg)</th>
+              <th style={styles.th}>Rating</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {repPerformance.map((rep, index) => (
+              <tr key={index}>
+                <td style={styles.td}>
+                  {rep.name}
+                </td>
+
+                <td style={styles.td}>
+                  {rep.collections}
+                </td>
+
+                <td style={styles.td}>
+                  ₦{Number(
+                    rep.revenue || 0
+                  ).toLocaleString()}
+                </td>
+
+                <td style={styles.td}>
+                  {rep.wasteKg} kg
+                </td>
+
+                <td style={styles.td}>
+                  {rep.rating}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <div style={styles.section}>
