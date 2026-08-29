@@ -301,14 +301,17 @@ export const processCollectionPurchase =
         "transactions"
       ),
       {
-        type: "rep_debit",
-        repId,
-        amount: repDebit,
-        status:
-          "completed",
-        createdAt:
-          serverTimestamp(),
-      }
+  type: "rep_debit",
+  repId,
+  amount: repDebit,
+  purchaseValue: totalValue,
+  totalWeight,
+  repLevy,
+  status:
+    "completed",
+  createdAt:
+    serverTimestamp(),
+}
     );
 
     await addDoc(
