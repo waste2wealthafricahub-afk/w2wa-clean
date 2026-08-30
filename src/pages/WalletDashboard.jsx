@@ -1,4 +1,4 @@
-import {
+import React, {
   useEffect,
   useState,
 } from "react";
@@ -18,7 +18,6 @@ import {
 } from "firebase/firestore";
 
 export default function WalletDashboard() {
-
   const [wallet, setWallet] =
     useState(null);
 
@@ -26,127 +25,400 @@ export default function WalletDashboard() {
     setTransactions] =
     useState([]);
 
+  const [loading,
+    setLoading] =
+    useState(true);
+
   useEffect(() => {
     loadWallet();
   }, []);
 
   const loadWallet = async () => {
-
     try {
+      const user =
+        auth.currentUser;
 
-      const user = auth.currentUser;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-      if (!user) return;
-
-     const walletRef = doc(
-  db,
-  "repWallets",
-  user.uid
-);
+      // =========================
+      // LOAD REPRESENTATIVE WALLET
+      // =========================
+      const walletRef = doc(
+        db,
+        "repWallets",
+        user.uid
+      );
 
       const walletSnap =
         await getDoc(walletRef);
 
       if (walletSnap.exists()) {
-        setWallet(walletSnap.data());
+        setWallet(
+          walletSnap.data()
+        );
       }
 
-     const transactionQuery = query(
-  collection(db, "transactions"),
-  where("repId", "==", user.uid)
-);
+      // =========================
+      // LOAD REPRESENTATIVE
+      // // TRANSACTIONS
+      // =========================
+      const transactionQuery =
+        query(
+          collection(
+            db,
+            "transactions"
+          ),
+          where(
+            "repId",
+            "==",
+            user.uid
+          )
+        );
 
       const transactionSnap =
-        await getDocs(transactionQuery);
+        await getDocs(
+          transactionQuery
+        );
 
-      const transactionData = [];
+      const transactionData =
+        transactionSnap.docs.map(
+          (transactionDoc) => ({
+            id: transactionDoc.id,
+            ...transactionDoc.data(),
+          })
+        );
 
-      transactionSnap.forEach((doc) => {
-        transactionData.push(doc.data());
-      });
+      // Newest transactions first
+      transactionData.sort(
+        (a, b) => {
+          const aTime =
+            a.createdAt?.toMillis?.() ||
+            0;
 
-      setTransactions(transactionData);
+          const bTime =
+            b.createdAt?.toMillis?.() ||
+            0;
+
+          return bTime - aTime;
+        }
+      );
+
+      setTransactions(
+        transactionData
+      );
+
+      setLoading(false);
 
     } catch (error) {
-      console.error(error);
+      console.error(
+        "Wallet loading error:",
+        error
+      );
+
+      setLoading(false);
     }
   };
 
-  return (
-    <div style={{ padding: "20px" }}>
+  if (loading) {
+    return (
+      <div style={styles.page}>
+        <h2>
+          Loading Representative Wallet...
+        </h2>
+      </div>
+    );
+  }
 
-      <h1>Wallet Dashboard</h1>
+  // =========================
+  // FINANCIAL SUMMARY
+  // =========================
+
+  const availableFloat =
+    Number(
+      wallet?.floatBalance || 0
+    );
+
+  const totalPurchases =
+    Number(
+      wallet?.totalPurchases || 0
+    );
+
+  const representativeLevies =
+    Number(
+      wallet?.totalLeviesPaid || 0
+    );
+
+  const totalFloatUsed =
+    totalPurchases +
+    representativeLevies;
+
+  return (
+    <div style={styles.page}>
+
+      <h1>
+        Representative Wallet
+      </h1>
+
+      <p>
+        Manage your collection float
+        and view your financial transactions.
+      </p>
+
+      {/* =========================
+          WALLET SUMMARY
+      ========================= */}
+
+      <div style={styles.summaryGrid}>
+
+        <div style={styles.balanceCard}>
+          <h3>
+            Available Float
+          </h3>
+
+          <h1>
+            ₦
+            {availableFloat.toLocaleString()}
+          </h1>
+
+          <p>
+            Funds available for
+            waste collection purchases
+          </p>
+        </div>
+
+        <div style={styles.card}>
+          <h3>
+            Total Waste Purchases
+          </h3>
+
+          <h2>
+            ₦
+            {totalPurchases.toLocaleString()}
+          </h2>
+
+          <p>
+            Value of waste purchased
+          </p>
+        </div>
+
+        <div style={styles.card}>
+          <h3>
+            Representative Levies Paid
+          </h3>
+
+          <h2>
+            ₦
+            {representativeLevies.toLocaleString()}
+          </h2>
+
+          <p>
+            5% Representative levy
+          </p>
+        </div>
+
+        <div style={styles.card}>
+          <h3>
+            Total Float Used
+          </h3>
+
+          <h2>
+            ₦
+            {totalFloatUsed.toLocaleString()}
+          </h2>
+
+          <p>
+            Purchases + Representative levy
+          </p>
+        </div>
+
+      </div>
+
+      {/* =========================
+          BUSINESS ACCOUNT
+      ========================= */}
 
       <div style={styles.card}>
 
-        <h3>
-          Current Balance
-        </h3>
+        <h2>
+          Float Funding Account
+        </h2>
 
-       <h1>
-  ₦{Number(wallet?.floatBalance || 0).toLocaleString()}
-</h1>
+        <p>
+          <strong>
+            Account Name:
+          </strong>{" "}
+          Waste2wealthafrica Hub
+        </p>
 
-<p>
-  Total Purchases:
-  ₦{Number(wallet?.totalPurchases || 0).toLocaleString()}
-</p>
+        <p>
+          <strong>
+            Bank:
+          </strong>{" "}
+          Moniepoint
+        </p>
 
-<p>
-  Total Levies Paid:
-  ₦{Number(wallet?.totalLeviesPaid || 0).toLocaleString()}
-</p>
+        <p>
+          <strong>
+            Account Number:
+          </strong>{" "}
+          6970352296
+        </p>
+
+        <p style={styles.note}>
+          After making a float payment,
+          submit your payment reference
+          through the funding request process.
+          Your float will be credited after
+          Admin verification and approval.
+        </p>
 
       </div>
+
+      {/* =========================
+          TRANSACTION HISTORY
+      ========================= */}
 
       <div style={styles.section}>
 
         <h2>
-          Transactions
+          Transaction History
         </h2>
 
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th style={styles.th}>Type</th>
-              <th style={styles.th}>Amount</th>
-              <th style={styles.th}>Description</th>
-            </tr>
-          </thead>
+        {transactions.length === 0 ? (
+          <p>
+            No transactions yet.
+          </p>
+        ) : (
+          <div style={styles.tableContainer}>
 
-          <tbody>
-  {transactions.map((item, index) => (
-    <tr key={index}>
-      <td style={styles.td}>
-        {item.type === "float_topup"
-          ? "Float Top-up"
-          : item.type === "rep_debit"
-          ? "Collection Purchase"
-          : item.type === "school_payment"
-          ? "School Payment"
-          : item.type}
-      </td>
+            <table style={styles.table}>
 
-      <td style={styles.td}>
-        {item.type === "float_topup"
-          ? "+"
-          : item.type === "rep_debit"
-          ? "-"
-          : ""}
-        ₦{Number(item.amount || 0).toLocaleString()}
-      </td>
+              <thead>
+                <tr>
+                  <th style={styles.th}>
+                    Date
+                  </th>
 
-      <td style={styles.td}>
-        {item.type === "float_topup"
-          ? "Admin-funded representative float"
-          : item.type === "rep_debit"
-          ? "Waste collection purchase"
-          : item.description || "-"}
-      </td>
-    </tr>
-  ))}
-</tbody>
-        </table>
+                  <th style={styles.th}>
+                    Type
+                  </th>
+
+                  <th style={styles.th}>
+                    Amount
+                  </th>
+
+                  <th style={styles.th}>
+                    Description
+                  </th>
+
+                  <th style={styles.th}>
+                    Status
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+
+                {transactions.map(
+                  (item) => {
+
+                    const isTopUp =
+                      item.type ===
+                      "float_topup";
+
+                    const isPurchase =
+                      item.type ===
+                      "rep_debit";
+
+                    const amount =
+                      Number(
+                        item.amount || 0
+                      );
+
+                    let date = "-";
+
+                    if (
+                      item.createdAt?.toDate
+                    ) {
+                      date =
+                        item.createdAt
+                          .toDate()
+                          .toLocaleDateString();
+                    }
+
+                    return (
+                      <tr
+                        key={item.id}
+                      >
+
+                        <td
+                          style={styles.td}
+                        >
+                          {date}
+                        </td>
+
+                        <td
+                          style={styles.td}
+                        >
+                          {isTopUp
+                            ? "Float Top-up"
+                            : isPurchase
+                            ? "Collection Purchase"
+                            : item.type ||
+                              "-"}
+                        </td>
+
+                        <td
+                          style={styles.td}
+                        >
+                          <span
+                            style={{
+                              fontWeight:
+                                "bold",
+                            }}
+                          >
+                            {isTopUp
+                              ? "+"
+                              : isPurchase
+                              ? "-"
+                              : ""}
+                            ₦
+                            {amount.toLocaleString()}
+                          </span>
+                        </td>
+
+                        <td
+                          style={styles.td}
+                        >
+                          {isTopUp
+                            ? "Admin-funded representative float"
+                            : isPurchase
+                            ? "Waste collection purchase"
+                            : item.description ||
+                              "-"}
+                        </td>
+
+                        <td
+                          style={styles.td}
+                        >
+                          {item.status ||
+                            "completed"}
+                        </td>
+
+                      </tr>
+                    );
+                  }
+                )}
+
+              </tbody>
+
+            </table>
+
+          </div>
+        )}
 
       </div>
 
@@ -155,6 +427,29 @@ export default function WalletDashboard() {
 }
 
 const styles = {
+  page: {
+    padding: "20px",
+    background: "#f5f7fa",
+    minHeight: "100vh",
+  },
+
+  summaryGrid: {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: "15px",
+    marginTop: "20px",
+    marginBottom: "20px",
+  },
+
+  balanceCard: {
+    background: "#16a34a",
+    color: "#fff",
+    padding: "20px",
+    borderRadius: "12px",
+    boxShadow:
+      "0 2px 8px rgba(0,0,0,0.08)",
+  },
 
   card: {
     background: "#fff",
@@ -165,10 +460,22 @@ const styles = {
     marginBottom: "20px",
   },
 
+  note: {
+    background: "#f0f7ff",
+    padding: "12px",
+    borderRadius: "8px",
+    marginTop: "15px",
+  },
+
   section: {
     background: "#fff",
     padding: "20px",
     borderRadius: "12px",
+    marginBottom: "20px",
+  },
+
+  tableContainer: {
+    overflowX: "auto",
   },
 
   table: {
@@ -177,7 +484,7 @@ const styles = {
   },
 
   th: {
-    background: "#007bff",
+    background: "#2563eb",
     color: "#fff",
     padding: "12px",
     textAlign: "left",
