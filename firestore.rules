@@ -1,0 +1,145 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && request.auth.token.email == "waste2wealthafricahub@gmail.com";
+    }
+
+    function isApprovedRep() {
+      return isSignedIn()
+        && exists(
+          /databases/$(database)/documents/representatives/$(request.auth.uid)
+        )
+        && get(
+          /databases/$(database)/documents/representatives/$(request.auth.uid)
+        ).data.approved == true;
+    }
+
+    function isApprovedSchool() {
+      return isSignedIn()
+        && exists(
+          /databases/$(database)/documents/schools/$(request.auth.uid)
+        )
+        && get(
+          /databases/$(database)/documents/schools/$(request.auth.uid)
+        ).data.approved == true;
+    }
+
+    function isApprovedMonitor() {
+      return isSignedIn()
+        && exists(
+          /databases/$(database)/documents/monitors/$(request.auth.uid)
+        )
+        && get(
+          /databases/$(database)/documents/monitors/$(request.auth.uid)
+        ).data.approved == true;
+    }
+
+
+
+// Representatives
+    match /representatives/{repId} {
+      allow read: if isAdmin()
+        || (isApprovedRep() && request.auth.uid == repId);
+
+      allow create: if isSignedIn()
+        && request.auth.uid == repId;
+
+      allow update: if isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // Schools
+    match /schools/{schoolId} {
+      allow read: if isAdmin()
+        || (isApprovedSchool() && request.auth.uid == schoolId);
+
+      allow create: if isSignedIn()
+        && request.auth.uid == schoolId;
+
+      allow update: if isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // Monitors
+    match /monitors/{monitorId} {
+      allow read: if isAdmin()
+        || (isApprovedMonitor() && request.auth.uid == monitorId);
+
+      allow create: if isSignedIn()
+        && request.auth.uid == monitorId;
+
+      allow update: if isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // Representative wallets
+    match /repWallets/{repId} {
+      allow read: if isAdmin()
+        || (isApprovedRep() && request.auth.uid == repId);
+
+  allow create: if isAdmin()
+    || (isSignedIn()
+        && request.auth.uid == repId
+        && request.resource.data.repId == repId
+        && request.resource.data.floatBalance == 0
+        && request.resource.data.totalPurchases == 0
+        && request.resource.data.totalLeviesPaid == 0);
+
+      allow update, delete: if isAdmin();
+    }
+
+    // School wallets
+    match /schoolWallets/{schoolId} {
+      allow read: if isAdmin()
+        || (isApprovedSchool() && request.auth.uid == schoolId);
+
+  allow create: if isAdmin()
+    || (isSignedIn()
+        && request.auth.uid == schoolId
+        && request.resource.data.balance == 0
+        && request.resource.data.totalEarned == 0
+        && request.resource.data.totalDeductions == 0);
+
+      allow update, delete: if isAdmin();
+    }
+
+    // Platform wallet — Admin only
+    match /platformWallet/{walletId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Financial ledger — Admin only for this first security test
+    match /transactions/{transactionId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Procurement records — read access for authenticated operational users.
+    // Writes will be handled in the later procurement-security step.
+    match /collections/{collectionId} {
+      allow read: if isAdmin() || isApprovedRep() || isApprovedSchool();
+      allow write: if isAdmin();
+    }
+
+    // Recycling records
+    match /recyclingLogs/{logId} {
+      allow read: if isAdmin() || isApprovedRep() || isApprovedSchool();
+      allow write: if isAdmin();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
