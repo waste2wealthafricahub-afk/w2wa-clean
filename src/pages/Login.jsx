@@ -15,10 +15,8 @@ import {
 } from "../firebase";
 
 import {
-  collection,
-  query,
-  where,
-  getDocs,
+  doc,
+  getDoc,
 } from "firebase/firestore";
 
 export default function Login() {
@@ -34,11 +32,13 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
+        const userCredential = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+        const user = userCredential.user;
 
       // =====================
       // ADMIN
@@ -52,90 +52,90 @@ export default function Login() {
         return;
       }
 
-      // =====================
-      // MINISTRY MONITOR
-      // =====================
-      const monitorQuery = query(
-        collection(db, "monitors"),
-        where("email", "==", email)
-      );
-
-      const monitorSnapshot =
-        await getDocs(monitorQuery);
-
-      if (!monitorSnapshot.empty) {
-        const monitorData =
-          monitorSnapshot.docs[0].data();
-
-        if (!monitorData.approved) {
-          alert(
-            "Monitor not approved yet"
-          );
-
-          setLoading(false);
-          return;
-        }
-
-        navigate(
-          "/monitoring-dashboard"
+        // =====================
+        // MINISTRY MONITOR
+        // =====================
+        const monitorRef = doc(
+          db,
+          "monitors",
+          user.uid
         );
 
-        setLoading(false);
-        return;
-      }
+        const monitorSnapshot =
+          await getDoc(monitorRef);
 
-      // =====================
-      // REPRESENTATIVE
-      // =====================
-      const repQuery = query(
-        collection(
-          db,
-          "representatives"
-        ),
-        where("email", "==", email)
-      );
+        if (monitorSnapshot.exists()) {
+          const monitorData =
+            monitorSnapshot.data();
 
-      const repSnapshot =
-        await getDocs(repQuery);
+          if (!monitorData.approved) {
+            alert(
+              "Monitor not approved yet"
+            );
 
-      if (!repSnapshot.empty) {
-        const repData =
-          repSnapshot.docs[0].data();
+            setLoading(false);
+            return;
+          }
 
-        if (!repData.approved) {
-          alert(
-            "Representative not approved yet"
+          navigate(
+            "/monitoring-dashboard"
           );
 
           setLoading(false);
           return;
         }
 
-        navigate("/rep-dashboard");
+        // =====================
+        // REPRESENTATIVE
+        // =====================
+        const repRef = doc(
+          db,
+          "representatives",
+          user.uid
+        );
 
-        setLoading(false);
-        return;
-      }
+        const repSnapshot =
+          await getDoc(repRef);
 
-      // =====================
-      // SCHOOL
-      // =====================
-      const schoolQuery = query(
-        collection(db, "schools"),
-        where("email", "==", email)
-      );
+        if (repSnapshot.exists()) {
+          const repData =
+            repSnapshot.data();
 
-      const schoolSnapshot =
-        await getDocs(schoolQuery);
+          if (!repData.approved) {
+            alert(
+              "Representative not approved yet"
+            );
 
-      if (!schoolSnapshot.empty) {
-        navigate("/school-dashboard");
+            setLoading(false);
+            return;
+          }
 
-        setLoading(false);
-        return;
-      }
+          navigate("/rep-dashboard");
 
-      alert("User role not found");
+          setLoading(false);
+          return;
+        }
+
+        // =====================
+        // SCHOOL
+        // =====================
+        const schoolRef = doc(
+          db,
+          "schools",
+          user.uid
+        );
+
+        const schoolSnapshot =
+          await getDoc(schoolRef);
+
+        if (schoolSnapshot.exists()) {
+          navigate("/school-dashboard");
+
+          setLoading(false);
+          return;
+        }
+
+        alert("User role not found");
 
     } catch (error) {
       console.error(error);

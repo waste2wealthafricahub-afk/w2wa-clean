@@ -47,7 +47,7 @@ service cloud.firestore {
 // Representatives
     match /representatives/{repId} {
       allow read: if isAdmin()
-        || (isApprovedRep() && request.auth.uid == repId);
+        || (isSignedIn() && request.auth.uid == repId);
 
       allow create: if isSignedIn()
         && request.auth.uid == repId;
@@ -73,7 +73,7 @@ service cloud.firestore {
     // Monitors
     match /monitors/{monitorId} {
       allow read: if isAdmin()
-        || (isApprovedMonitor() && request.auth.uid == monitorId);
+        || (isSignedIn() && request.auth.uid == monitorId);
 
       allow create: if isSignedIn()
         && request.auth.uid == monitorId;

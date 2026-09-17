@@ -82,21 +82,16 @@ useEffect(() => {
       if (!user) return;
 
       // Get the logged-in Representative
-    const repQuery = query(
-  collection(db, "representatives"),
-  where("uid", "==", user.uid)
-);
+      const repRef = doc(db, "representatives", user.uid);
 
-const repSnapshot =
-  await getDocs(repQuery);
+      const repSnapshot = await getDoc(repRef);
 
-if (repSnapshot.empty) {
-  setSchools([]);
-  return;
-}
+      if (!repSnapshot.exists()) {
+        setSchools([]);
+        return;
+      }
 
-const repData =
-  repSnapshot.docs[0].data();
+      const repData = repSnapshot.data();
 
 const assignedSchoolIds =
   repData.assignedSchoolIds || [];
@@ -105,23 +100,19 @@ const assignedSchoolIds =
         return;
       }
 
-      // Fetch schools
-      const schoolsSnapshot =
-        await getDocs(
-          collection(db, "schools")
+        // Fetch only assigned schools
+        const schoolDocs = await Promise.all(
+          assignedSchoolIds.map((schoolId) =>
+            getDoc(doc(db, "schools", schoolId))
+          )
         );
 
-      const schoolList =
-        schoolsSnapshot.docs
-          .map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }))
-         .filter((school) =>
-  assignedSchoolIds.includes(
-    school.schoolId
-  )
-);
+        const schoolList = schoolDocs
+          .filter((schoolSnap) => schoolSnap.exists())
+          .map((schoolSnap) => ({
+            id: schoolSnap.id,
+            ...schoolSnap.data(),
+          }));
 
       setSchools(schoolList);
 
