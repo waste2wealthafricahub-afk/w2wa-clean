@@ -8,22 +8,19 @@ import { onAuthStateChanged } from "firebase/auth";
 
 import {
   collection,
-  addDoc,
   getDocs,
   doc,
   getDoc,
   query,
   where,
-  serverTimestamp,
 } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
 
 import {
   db,
+  functions,
   auth,
 } from "../firebase";
-import {
-  processCollectionPurchase,
-} from "../services/walletService";
 
 export default function RepresentativeDashboard() {
   const navigate = useNavigate();
@@ -261,48 +258,18 @@ const snapshot =
     // =========================
     // SAVE COLLECTION RECORD
     // =========================
-    await addDoc(
-      collection(db, "collections"),
-      {
-        repId,
-        schoolId:
-          selectedSchool,
-
-        plasticKg,
-        paperKg,
-        metalKg,
-
-        plasticPrice:
-          prices.plastic,
-
-        paperPrice:
-          prices.paper,
-
-        metalPrice:
-          prices.metal,
-
-        totalWeight,
-        totalValue,
-
-        repLevy,
-        schoolLevy,
-        schoolCredit,
-
-        status: "completed",
-
-        createdAt:
-          serverTimestamp(),
-      }
+    // PROCESS COLLECTION PURCHASE SECURELY
+    // =========================
+    const processCollectionPurchase = httpsCallable(
+      functions,
+      "processCollectionPurchase"
     );
 
-    // =========================
-    // PROCESS WALLET MOVEMENT
-    // =========================
     await processCollectionPurchase({
-      repId,
-      schoolId:
-        selectedSchool,
-      totalValue,
+      schoolId: selectedSchool,
+      plasticKg,
+      paperKg,
+      metalKg,
     });
 
     alert(
