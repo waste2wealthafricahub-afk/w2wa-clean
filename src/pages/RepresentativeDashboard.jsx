@@ -118,7 +118,7 @@ const assignedSchoolIds =
       setSchools(schoolList);
 
     } catch (error) {
-      console.error(error);
+      console.error("FETCH SCHOOLS ERROR:", error);
     }
   };
   // =========================
