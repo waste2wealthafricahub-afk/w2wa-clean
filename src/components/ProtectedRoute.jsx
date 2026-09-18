@@ -2,10 +2,8 @@ import { Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { auth, db } from "../firebase";
 import {
-  collection,
-  query,
-  where,
-  getDocs,
+  doc,
+  getDoc,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -137,29 +135,18 @@ if (
               allowedRole ===
               "representative"
             ) {
-              const repQuery =
-                query(
-                  collection(
-                    db,
-                    "representatives"
-                  ),
-                  where(
-                    "email",
-                    "==",
-                    user.email
-                  )
+                const repRef = doc(
+                  db,
+                  "representatives",
+                  user.uid
                 );
 
-              const repSnapshot =
-                await getDocs(
-                  repQuery
-                );
+                const repSnapshot =
+                  await getDoc(repRef);
 
-              if (
-                !repSnapshot.empty
-              ) {
-                const repData =
-                  repSnapshot.docs[0].data();
+                if (repSnapshot.exists()) {
+                  const repData =
+                    repSnapshot.data();
 
                 setAuthorized(
                   repData.approved
