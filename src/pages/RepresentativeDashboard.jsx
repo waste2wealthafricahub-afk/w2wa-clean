@@ -85,6 +85,7 @@ useEffect(() => {
       const repRef = doc(db, "representatives", user.uid);
 
       const repSnapshot = await getDoc(repRef);
+      console.log("FETCH SCHOOLS: representative read succeeded");
 
       if (!repSnapshot.exists()) {
         setSchools([]);
