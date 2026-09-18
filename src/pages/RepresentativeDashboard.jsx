@@ -93,6 +93,7 @@ useEffect(() => {
       }
 
       const repData = repSnapshot.data();
+      console.log("FETCH SCHOOLS: assignedSchoolIds =", repData.assignedSchoolIds);
 
 const assignedSchoolIds =
   repData.assignedSchoolIds || [];
