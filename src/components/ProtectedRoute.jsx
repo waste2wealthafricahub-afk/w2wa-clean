@@ -94,29 +94,20 @@ if (
     return;
   }
 
-  const monitorQuery =
-    query(
-      collection(
-        db,
-        "monitors"
-      ),
-      where(
-        "email",
-        "==",
-        user.email
-      )
-    );
+  const monitorRef = doc(
+    db,
+    "monitors",
+    user.uid
+  );
 
   const monitorSnapshot =
-    await getDocs(
-      monitorQuery
+    await getDoc(
+      monitorRef
     );
 
-  if (
-    !monitorSnapshot.empty
-  ) {
+  if (monitorSnapshot.exists()) {
     const monitorData =
-      monitorSnapshot.docs[0].data();
+      monitorSnapshot.data();
 
     setAuthorized(
       monitorData.approved
