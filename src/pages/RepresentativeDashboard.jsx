@@ -102,22 +102,21 @@ const assignedSchoolIds =
         return;
       }
 
-        // Fetch only assigned schools
-        const schoolDocs = await Promise.all(
-          assignedSchoolIds.map((schoolId) =>
-            getDoc(doc(db, "schools", schoolId))
-          )
+        // Fetch only assigned schools by canonical schoolId field
+        const schoolsQuery = query(
+          collection(db, "schools"),
+          where("schoolId", "in", assignedSchoolIds)
         );
 
-        const schoolList = schoolDocs
-          .filter((schoolSnap) => schoolSnap.exists())
-          .map((schoolSnap) => ({
-            id: schoolSnap.id,
-            ...schoolSnap.data(),
-          }));
+        const schoolSnapshot = await getDocs(schoolsQuery);
 
-      console.log("FETCH SCHOOLS: schoolList =", schoolList);
-      setSchools(schoolList);
+        const schoolList = schoolSnapshot.docs.map((schoolSnap) => ({
+          id: schoolSnap.id,
+          ...schoolSnap.data(),
+        }));
+
+        console.log("FETCH SCHOOLS: schoolList =", schoolList);
+        setSchools(schoolList);
 
     } catch (error) {
       console.error("FETCH SCHOOLS ERROR:", error);
