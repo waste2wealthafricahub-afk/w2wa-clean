@@ -116,6 +116,7 @@ const assignedSchoolIds =
             ...schoolSnap.data(),
           }));
 
+      console.log("FETCH SCHOOLS: schoolList =", schoolList);
       setSchools(schoolList);
 
     } catch (error) {
