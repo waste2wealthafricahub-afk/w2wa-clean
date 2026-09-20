@@ -213,11 +213,9 @@ const snapshot =
   const repLevy =
     totalValue * 0.05;
 
- const schoolLevy =
-  totalValue * 0.05;
-
+  const schoolLevy = 0;
   const schoolCredit =
-    totalValue - schoolLevy;
+    totalValue;
 
   // =========================
   // SUBMIT COLLECTION
