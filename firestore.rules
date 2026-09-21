@@ -60,7 +60,19 @@ service cloud.firestore {
     // Schools
     match /schools/{schoolId} {
       allow read: if isAdmin()
-        || (isApprovedSchool() && request.auth.uid == schoolId);
+        || (isApprovedSchool() && request.auth.uid == schoolId)
+        || (
+          isSignedIn()
+          && exists(
+            /databases/$(database)/documents/representatives/$(request.auth.uid)
+          )
+          && get(
+            /databases/$(database)/documents/representatives/$(request.auth.uid)
+          ).data.approved == true
+          && resource.data.schoolId in get(
+            /databases/$(database)/documents/representatives/$(request.auth.uid)
+          ).data.assignedSchoolIds
+        );
 
       allow create: if isSignedIn()
         && request.auth.uid == schoolId;
@@ -134,6 +146,12 @@ service cloud.firestore {
     // Recycling records
     match /recyclingLogs/{logId} {
       allow read: if isAdmin() || isApprovedRep() || isApprovedSchool();
+      allow write: if isAdmin();
+    }
+
+    // Current recycling prices
+    match /prices/{priceId} {
+      allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
