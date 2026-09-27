@@ -160,7 +160,7 @@ export default function Login() {
         <h2 style={styles.title}>
           EM3C / W2WA
         </h2>
-        <p style={{ marginTop: '-8px', marginBottom: '20px', fontWeight: '600' }}>Clean School Project</p>
+        <p style={{ marginTop: '-6px', marginBottom: '20px', fontWeight: '700', fontSize: '18px', textAlign: 'center' }}>Clean School Project</p>
 
         {/* =====================
             LOGIN FORM
