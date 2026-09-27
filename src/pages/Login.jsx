@@ -158,8 +158,9 @@ export default function Login() {
             TITLE
         ====================== */}
         <h2 style={styles.title}>
-          EMCCC PORTAL
+          EM3C / W2WA
         </h2>
+        <p style={{ marginTop: '-8px', marginBottom: '20px', fontWeight: '600' }}>Clean School Project</p>
 
         {/* =====================
             LOGIN FORM
@@ -327,3 +328,4 @@ const styles = {
     color: "#777777",
   },
 };
+
